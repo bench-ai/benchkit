@@ -1,0 +1,9 @@
+*Credentials.json
+*Configuration.json
+*Config.json
+.idea/
+*.DS_Store
+.env
+test.py
+*__pycache__
+*ven
