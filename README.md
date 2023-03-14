@@ -1,5 +1,5 @@
-﻿# *Bench Pytorch SDK*
-Welcome to the Bench SDK for PyTorch - a cloud integrated 
+﻿# *TorchBench*
+Welcome to TorchBench the Bench SDK for PyTorch - a cloud integrated 
 library that enables you to leverage your PyTorch deep learning models on the 
 cloud through a PyTorch-based API.
 ## Table of Contents
@@ -8,12 +8,12 @@ cloud through a PyTorch-based API.
 	* Requires Docker to be installed
 * Register a Project on [Bench](https://bench-ai.com/)
 * Define a Model
-* Logging
-* Graphing
-* Optimization
+* Logging(Coming Soon)
+* Graphing(Coming Soon)
+* Optimization(Coming Soon)
 * Migrate your project
+    * Migrating your settings
 	* Spawning your dedicated server
     * Transferring your data to a bucket / using a hosted dataset
 	*  Transferring your project data to your Bench Project
-* Training your hosted model through the **ApiModule** class
-* Running inference on your hosted model
+* Deploy your trained model for inference(Coming Soon)

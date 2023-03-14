@@ -1,9 +1,5 @@
 import json
 from pathlib import Path
-from dotenv import load_dotenv
-
-load_dotenv()
-debug = False
 
 settings_path = Path(__file__).resolve().parent / "Config.json"
 
