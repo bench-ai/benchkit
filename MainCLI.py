@@ -56,10 +56,14 @@ parser.add_argument("-ms",
                     "--migrate_settings",
                     required=False)
 
+parser.add_argument("-v",
+                    "--version",
+                    action='store_true',
+                    required=False)
+
 args = parser.parse_args()
 
 if args.login:
-    print_version()
     login()
 
 if args.loginm:
@@ -68,3 +72,6 @@ if args.loginm:
 
 if args.migrate_settings:
     set_settings(args.migrate_settings)
+
+if args.version:
+    print_version()
