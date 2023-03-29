@@ -3,7 +3,10 @@ from pathlib import Path
 from Miscellaneous.Settings import set_config
 from Miscellaneous.Verbose import verbose_logo
 import argparse
+import getpass
+from Data.Helpers import create_dataset_dir
 from Miscellaneous.User import AuthenticatedUser, Credential
+from Datasets.ProjectDatasets import main
 
 
 def set_settings(settings_path: str):
@@ -22,9 +25,13 @@ def login():
         print("Login Failed invalid credentials, you can also attempt to login manually using -inm or --loginm flag")
 
 
+def logout():
+    AuthenticatedUser.logout()
+
+
 def login_manual():
     username = input("Username: ")
-    password = input("Password: ")
+    password = getpass.getpass()
 
     cred_dict = {
         "user_credentials": {
@@ -35,6 +42,14 @@ def login_manual():
 
     set_config(cred_dict)
     login()
+
+
+def start_dataset():
+    create_dataset_dir()
+
+
+def create_datasets():
+    main()
 
 
 def print_version():
@@ -61,13 +76,27 @@ parser.add_argument("-v",
                     action='store_true',
                     required=False)
 
+parser.add_argument("-out",
+                    "--logout",
+                    action='store_true',
+                    required=False)
+
+parser.add_argument("-ds",
+                    "--dataset",
+                    action='store_true',
+                    required=False)
+
+parser.add_argument("-mds",
+                    "--makedata",
+                    action='store_true',
+                    required=False)
+
 args = parser.parse_args()
 
 if args.login:
     login()
 
 if args.loginm:
-    print_version()
     login_manual()
 
 if args.migrate_settings:
@@ -75,3 +104,12 @@ if args.migrate_settings:
 
 if args.version:
     print_version()
+
+if args.logout:
+    logout()
+
+if args.dataset:
+    start_dataset()
+
+if args.makedata:
+    create_datasets()

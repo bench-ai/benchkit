@@ -6,8 +6,11 @@ settings_path = Path(__file__).resolve().parent / "Config.json"
 
 def get_config() -> dict:
     config = {}
-    with open(settings_path, "r") as file:
-        config.update(json.load(file))
+    try:
+        with open(settings_path, "r") as file:
+            config.update(json.load(file))
+    except FileNotFoundError:
+        pass
 
     return config
 
@@ -17,7 +20,7 @@ def get_credentials() -> tuple[str, str]:
 
 
 def get_main_url() -> str:
-    return get_config()["api_url"]
+    return "https://api.bench-ai.com"
 
 
 def set_config(new_config: dict):
