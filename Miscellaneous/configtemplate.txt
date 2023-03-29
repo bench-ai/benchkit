@@ -1,0 +1,22 @@
+{
+  "user_credentials":
+  {
+    "username": "",
+    "password": ""
+  },
+
+  "datasets": [
+    {
+      "name": "train",
+      "path": ""
+    },
+    {
+      "name": "test",
+      "path": ""
+    },
+    {
+      "name": "val",
+      "path": ""
+    }
+  ]
+}

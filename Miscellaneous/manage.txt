@@ -1,0 +1,8 @@
+from Datasets.ProjectDatasets import main
+
+
+def create_datasets():
+    main()
+
+
+

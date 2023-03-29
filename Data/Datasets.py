@@ -50,8 +50,6 @@ class ChunkDataset(Dataset):
         os.mkdir(root_dir)
 
         current_chunk = self._chunk_list.pop(0)
-        # print(process, current_chunk)
-
         self._chunk_path = os.path.join(root_dir,
                                         os.path.split(current_chunk)[-1])
 
@@ -88,10 +86,8 @@ class ChunkDataset(Dataset):
             self._prev_doc_len += len(self._label_chunk)
             self.get_current_labels_and_files()
             self._pos += len(self._label_chunk)
-            # print(multiprocessing.current_process(), self._pos)
 
         file_tup = self.get_files(idx - self._prev_doc_len)
-        # print(file_tup)
         if file_tup:
             return self._label_chunk[idx - self._prev_doc_len], self.get_files(idx - self._prev_doc_len)
         else:
