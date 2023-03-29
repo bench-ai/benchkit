@@ -88,10 +88,8 @@ class ChunkDataset(Dataset):
             self._prev_doc_len += len(self._label_chunk)
             self.get_current_labels_and_files()
             self._pos += len(self._label_chunk)
-            # print(multiprocessing.current_process(), self._pos)
 
         file_tup = self.get_files(idx - self._prev_doc_len)
-        # print(file_tup)
         if file_tup:
             return self._label_chunk[idx - self._prev_doc_len], self.get_files(idx - self._prev_doc_len)
         else:
