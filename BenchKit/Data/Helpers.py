@@ -7,7 +7,7 @@ import shutil
 import pathlib
 import boto3.s3.transfer as s3transfer
 from tqdm import tqdm
-from Data.Datasets import ProcessorDataset
+from BenchKit.Data.Datasets import ProcessorDataset
 
 megabyte = 1_024 ** 2
 gigabyte = megabyte * 1024

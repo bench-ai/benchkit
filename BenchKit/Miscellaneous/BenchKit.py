@@ -4,7 +4,7 @@ from .Settings import set_config
 from .Verbose import verbose_logo
 import argparse
 import getpass
-from Data.Helpers import create_dataset_dir
+from BenchKit.Data.Helpers import create_dataset_dir
 from .User import AuthenticatedUser, Credential
 
 
@@ -55,7 +55,7 @@ def login_manual():
 def write_config():
     template_path = Path(__file__).resolve().parent / "configtemplate.txt"
     with open(template_path, "r") as f:
-        with open("../Config.json", "w") as file:
+        with open("Config.json", "w") as file:
             line = f.readline()
             while line:
                 file.write(line)
