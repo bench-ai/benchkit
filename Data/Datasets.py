@@ -50,8 +50,6 @@ class ChunkDataset(Dataset):
         os.mkdir(root_dir)
 
         current_chunk = self._chunk_list.pop(0)
-        # print(process, current_chunk)
-
         self._chunk_path = os.path.join(root_dir,
                                         os.path.split(current_chunk)[-1])
 

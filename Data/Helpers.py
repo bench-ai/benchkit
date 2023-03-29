@@ -4,6 +4,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 import shutil
+import pathlib
 import boto3.s3.transfer as s3transfer
 from tqdm import tqdm
 from Data.Datasets import ProcessorDataset
@@ -238,28 +239,39 @@ def affirm_size(save_folder: str):
         pass_size_requirement.insert(0, large_folder)
 
 
-# def iterate_directory(file_dir: str) -> tuple[str, bool]:
-#     with os.scandir(file_dir) as walk:
-#         for i in walk:
-#             if os.path.isfile(i):
-#                 yield str(pathlib.Path(file_dir).resolve() / i.name), False
-#             elif os.path.isdir(i):
-#                 new_path = pathlib.Path(file_dir).resolve() / i.name
-#                 yield str(new_path) + "/", True
-#                 yield from iterate_directory(new_path)
+def iterate_directory(file_dir: str) -> tuple[str, bool]:
+    with os.scandir(file_dir) as walk:
+        for i in walk:
+            if os.path.isfile(i):
+                yield str(pathlib.Path(file_dir).resolve() / i.name), False
+            elif os.path.isdir(i):
+                new_path = pathlib.Path(file_dir).resolve() / i.name
+                yield str(new_path) + "/", True
+                yield from iterate_directory(new_path)
 
 
 def create_dataset_dir():
-    if os.path.isdir("./DataFeeder"):
+    if os.path.isdir("./Datasets"):
         raise IsADirectoryError("Datasets directory already exists")
     else:
         current_path = "./Datasets"
         os.mkdir(current_path)
 
         whole_path = os.path.join(current_path, "ProjectDatasets.py")
+        init_path = os.path.join(current_path, "__init__.py")
+
+        with open(init_path, "w"):
+            pass
 
         with open(whole_path, "w") as file:
             file.write("# Write your datasets or datapipes here")
+            file.write("\n")
+            file.write("\n")
+            file.write("\n")
+            file.write("\n")
+            file.write("def main():\n")
+            file.write("    # Write your data loading code here\n")
+            file.write("    pass\n")
 
 
 def upload_file(session,
