@@ -6,4 +6,8 @@
 .env
 test.py
 *__pycache__
-*ven
+*venv
+traindogcat
+*TempData
+ProjectDatasets
+Datasets

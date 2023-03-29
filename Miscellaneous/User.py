@@ -1,8 +1,8 @@
 import json
 import os
 import pathlib
+from functools import wraps
 import requests
-from pydantic.class_validators import wraps
 from .Settings import get_main_url, get_credentials
 
 
@@ -77,6 +77,12 @@ def request_executor(req_type: str, **kwargs):
 class AuthenticatedUser:
 
     @staticmethod
+    def delete_credentials():
+        current_credentials_path = pathlib.Path(__file__).resolve().parent / "Credentials.json"
+        if os.path.exists(current_credentials_path):
+            os.remove(current_credentials_path)
+
+    @staticmethod
     def write_credentials(new_data: dict):
         current_credentials_path = pathlib.Path(__file__).resolve().parent / "Credentials.json"
 
@@ -138,3 +144,14 @@ class AuthenticatedUser:
                          "refresh_token": response.cookies.get("refresh_token")}
 
             AuthenticatedUser.write_credentials(cred_dict)
+
+    @staticmethod
+    def logout():
+        request_url = os.path.join(get_main_url(), "api", "auth", "logout")
+        response = requests.post(request_url)
+
+        if response.status_code != 200:
+            raise Credential("Unable to logout")
+        else:
+            AuthenticatedUser.delete_credentials()
+            print("...logged out")
