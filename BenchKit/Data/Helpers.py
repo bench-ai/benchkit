@@ -7,7 +7,7 @@ import shutil
 import pathlib
 import boto3.s3.transfer as s3transfer
 from tqdm import tqdm
-from BenchKit.Data.Datasets import ProcessorDataset
+from BenchKit.Data.Datasets import ProcessorDataset, ChunkDataset
 
 megabyte = 1_024 ** 2
 gigabyte = megabyte * 1024
@@ -17,6 +17,63 @@ limit = 750 * megabyte
 
 class UploadError(Exception):
     pass
+
+
+def process_datasets(processed_dataset: ProcessorDataset,
+                     chunk_dataset,
+                     dataset_name: str,
+                     *args,
+                     **kwargs):
+
+    from BenchKit.Miscellaneous.BenchKit import set_settings, write_config
+    from BenchKit.Miscellaneous.Settings import get_config, set_config
+    set_settings()
+
+    skip = False
+    cfg = get_config()
+    ds = None
+
+    for i in cfg["datasets"]:
+        if i["name"] == dataset_name:
+            skip = True
+            ds = i
+            break
+
+    if not skip:
+        is_2 = False
+        for i in DataLoader(processed_dataset, batch_size=1):
+            if len(i) == 2:
+                is_2 = True
+            break
+
+        if is_2:
+            ds_list = save_file_and_label(processed_dataset, dataset_name)
+        else:
+            ds_list = save_label_data(processed_dataset, dataset_name)
+
+        set_config({"datasets": ds_list})
+        cfg["datasets"] = ds_list
+
+        write_config()
+        print("Data is processed")
+
+    dl = DataLoader(dataset=chunk_dataset(dataset_name, *args, **kwargs), num_workers=4, batch_size=16)
+
+    if ds:
+        if not ds.get("test"):
+            for _ in tqdm(dl):
+                pass
+    else:
+        for _ in tqdm(dl):
+            pass
+
+    for idx, i in enumerate(cfg["datasets"]):
+        if i["name"] == dataset_name:
+            cfg["datasets"][idx]["test"] = True
+
+    if ds:
+        set_config({"datasets": cfg["datasets"]})
+        write_config()
 
 
 def copy_file(folder_path: str,
@@ -63,8 +120,17 @@ def save_folder_data(save_folder: str,
 
 
 def save_file_and_label(dataset: ProcessorDataset,
-                        save_folder: str):
-    save_folder = f"./ProjectDatasets/{save_folder}"
+                        ds_name: str):
+    from BenchKit.Miscellaneous.Settings import get_config
+    cwd = os.getcwd()
+    save_folder = os.path.join(cwd, "ProjectDatasets", ds_name)
+    config = get_config()
+
+    ds_list: list = config["datasets"]
+    ds_list.append({
+        "name": ds_name,
+        "path": save_folder
+    })
 
     if os.path.isdir(save_folder):
         raise UploadError("Folder already exists")
@@ -81,8 +147,10 @@ def save_file_and_label(dataset: ProcessorDataset,
     file_batch = []
     current_file_size = 0
 
-    for batch in tqdm(dataloader):
+    count = 0
 
+    for batch in tqdm(dataloader):
+        count += 1
         labels, file = batch
 
         if current_file_size <= limit:
@@ -108,11 +176,22 @@ def save_file_and_label(dataset: ProcessorDataset,
                      chunk_num,
                      label_batch,
                      file_batch)
+    ds_list[-1]["length"] = count
+    return ds_list
 
 
 def save_label_data(dataset: ProcessorDataset,
-                    save_folder: str) -> None:
-    save_folder = f"./ProjectDatasets/{save_folder}"
+                    ds_name: str):
+    from BenchKit.Miscellaneous.Settings import get_config, set_config
+    cwd = os.getcwd()
+    save_folder = os.path.join(cwd, "ProjectDatasets", ds_name)
+    config = get_config()
+
+    ds_list: list = config["datasets"]
+    ds_list.append({
+        "name": ds_name,
+        "path": save_folder
+    })
 
     if os.path.isdir(save_folder):
         raise UploadError("Folder already exists")
@@ -160,6 +239,8 @@ def save_label_data(dataset: ProcessorDataset,
                         folder_path)
 
     shutil.rmtree(folder_path)
+
+    return ds_list
 
 
 # test in the morning
@@ -264,6 +345,8 @@ def create_dataset_dir():
             pass
 
         with open(whole_path, "w") as file:
+            file.write("from BenchKit.Data.Datasets import ProcessorDataset, ChunkDataset\n")
+            file.write("from BenchKit.Data.Helpers import process_datasets\n")
             file.write("# Write your datasets or datapipes here")
             file.write("\n")
             file.write("\n")

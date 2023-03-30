@@ -1,9 +1,42 @@
+import argparse
+
+from BenchKit.Miscellaneous.BenchKit import write_config_template
 from Datasets.ProjectDatasets import main
-from TorchBench
+import shutil
 
 
 def create_datasets():
     main()
+
+
+def clear():
+    shutil.rmtree("./ProjectDatasets")
+
+
+def cli():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("-makemigration",
+                        "--mm",
+                        action='store_true',
+                        required=False)
+
+    parser.add_argument("-clear",
+                        "--cc",
+                        action="store_true")
+
+    args = parser.parse_args()
+
+    if args.clear:
+        clear()
+        write_config_template()
+
+    if args.loginm:
+        create_datasets()
+
+
+if __name__ == '__main__':
+    cli()
 
 
 

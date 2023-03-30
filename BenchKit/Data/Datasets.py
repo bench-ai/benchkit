@@ -5,6 +5,8 @@ from typing import Any, final
 import shutil
 import multiprocessing
 
+from BenchKit.Miscellaneous.Settings import get_config
+
 
 class ProcessorDataset(Dataset):
 
@@ -25,14 +27,20 @@ class ProcessorDataset(Dataset):
 class ChunkDataset(Dataset):
 
     def __init__(self,
-                 chunk_dir: str,
-                 dataset_len: int):
+                 name: str):
+
+        cfg = get_config()
+
+        for i in cfg.get("datasets"):
+            if i["name"] == name:
+                chunk_path = i["path"]
+                dataset_len = i["length"]
 
         self._label_chunk: list = []
         self._file_chunk = None
         self._chunk_path = None
 
-        self._chunk_list = [os.path.join(chunk_dir, chunk) for chunk in os.listdir(chunk_dir)]
+        self._chunk_list = [os.path.join(chunk_path, chunk) for chunk in os.listdir(chunk_path)]
         self._dataset_length = dataset_len
 
         self._pos = len(self._label_chunk)

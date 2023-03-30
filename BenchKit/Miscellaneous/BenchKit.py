@@ -8,8 +8,8 @@ from BenchKit.Data.Helpers import create_dataset_dir
 from .User import AuthenticatedUser, Credential
 
 
-def set_settings(settings_path: str):
-    with open(settings_path, "r") as file:
+def set_settings():
+    with open("Config.json", "r") as file:
         x = json.load(file)
 
     save_path = Path(__file__).resolve().parent / "Config.json"
@@ -52,7 +52,7 @@ def login_manual():
     login()
 
 
-def write_config():
+def write_config_template():
     template_path = Path(__file__).resolve().parent / "configtemplate.txt"
     with open(template_path, "r") as f:
         with open("Config.json", "w") as file:
@@ -60,6 +60,14 @@ def write_config():
             while line:
                 file.write(line)
                 line = f.readline()
+
+
+def write_config():
+    cfg = Path(__file__).resolve().parent / "Config.json"
+    with open(cfg, "r") as f:
+        cfg = json.load(f)
+        with open("Config.json", "w") as file:
+            json.dump(cfg, file)
 
 
 def write_manager():
@@ -92,10 +100,6 @@ def main():
                         action='store_true',
                         required=False)
 
-    parser.add_argument("-ms",
-                        "--migrate_settings",
-                        required=False)
-
     parser.add_argument("-v",
                         "--version",
                         action='store_true',
@@ -124,9 +128,6 @@ def main():
     if args.loginm:
         login_manual()
 
-    if args.migrate_settings:
-        set_settings(args.migrate_settings)
-
     if args.version:
         print_version()
 
@@ -137,7 +138,7 @@ def main():
         start_dataset()
 
     if args.startproject:
-        write_config()
+        write_config_template()
         write_manager()
         start_dataset()
 
