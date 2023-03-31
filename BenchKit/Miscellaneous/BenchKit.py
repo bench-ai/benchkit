@@ -14,7 +14,7 @@ def set_settings():
 
     save_path = Path(__file__).resolve().parent / "Config.json"
     with open(save_path, "w") as file:
-        json.dump(x, file)
+        json.dump(x, file, indent=4)
 
 
 def login():
@@ -35,6 +35,7 @@ def logout():
     }
 
     set_config(cred_dict)
+    write_config()
 
 
 def login_manual():
@@ -50,6 +51,7 @@ def login_manual():
 
     set_config(cred_dict)
     login()
+    write_config()
 
 
 def write_config_template():
@@ -67,7 +69,7 @@ def write_config():
     with open(cfg, "r") as f:
         cfg = json.load(f)
         with open("Config.json", "w") as file:
-            json.dump(cfg, file)
+            json.dump(cfg, file, indent=4)
 
 
 def write_manager():
@@ -95,11 +97,6 @@ def main():
                         action='store_true',
                         required=False)
 
-    parser.add_argument("-inm",
-                        "--loginm",
-                        action='store_true',
-                        required=False)
-
     parser.add_argument("-v",
                         "--version",
                         action='store_true',
@@ -123,9 +120,6 @@ def main():
     args = parser.parse_args()
 
     if args.login:
-        login()
-
-    if args.loginm:
         login_manual()
 
     if args.version:
