@@ -16,13 +16,13 @@ def clear():
 def cli():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-makemigration",
-                        "--mm",
+    parser.add_argument("-mm",
+                        "--makemigration",
                         action='store_true',
                         required=False)
 
-    parser.add_argument("-clear",
-                        "--cc",
+    parser.add_argument("-c",
+                        "--clear",
                         action="store_true")
 
     args = parser.parse_args()
@@ -31,12 +31,14 @@ def cli():
         clear()
         write_config_template()
 
-    if args.loginm:
+    if args.makemigration:
         create_datasets()
 
 
 if __name__ == '__main__':
     cli()
+
+
 
 
 
