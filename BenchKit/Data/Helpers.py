@@ -128,7 +128,7 @@ def process_datasets(processed_dataset: ProcessorDataset,
                     os.path.split(path)[-1],
                     resp["fields"])
 
-    print(Fore.GREEN + "Started Upload" + Style.RESET_ALL)
+    print(Fore.GREEN + "Finished Upload" + Style.RESET_ALL)
 
 
 def copy_file(folder_path: str,
