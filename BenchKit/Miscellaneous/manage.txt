@@ -1,9 +1,8 @@
 import argparse
-
-from BenchKit.Miscellaneous.BenchKit import write_config_template
+from BenchKit.Miscellaneous.Settings import get_config, set_config
+from BenchKit.Miscellaneous.BenchKit import write_config_template, set_project, set_settings
 from Datasets.ProjectDatasets import main
 import shutil
-
 
 def create_datasets():
     main()
@@ -28,8 +27,13 @@ def cli():
     args = parser.parse_args()
 
     if args.clear:
+        project_name = get_config()["project"]["name"]
+        user_creds = get_config()["user_credentials"]
         clear()
         write_config_template()
+        set_settings()
+        set_config({"user_credentials": user_creds})
+        set_project(project_name)
 
     if args.makemigration:
         create_datasets()
@@ -37,8 +41,3 @@ def cli():
 
 if __name__ == '__main__':
     cli()
-
-
-
-
-

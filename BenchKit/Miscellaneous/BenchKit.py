@@ -5,7 +5,7 @@ from .Verbose import verbose_logo
 import argparse
 import getpass
 from BenchKit.Data.Helpers import create_dataset_dir
-from .User import AuthenticatedUser, Credential
+from .User import AuthenticatedUser, Credential, get_user_project
 
 
 def set_settings():
@@ -82,6 +82,12 @@ def write_manager():
                 line = f.readline()
 
 
+def set_project(project_name: str):
+    data = get_user_project(project_name)
+    set_config({"project": data})
+    write_config()
+
+
 def start_dataset():
     create_dataset_dir()
 
@@ -114,7 +120,6 @@ def main():
 
     parser.add_argument("-sp",
                         "--startproject",
-                        action='store_true',
                         required=False)
 
     args = parser.parse_args()
@@ -131,10 +136,12 @@ def main():
     if args.dataset:
         start_dataset()
 
-    if args.startproject:
+    x = args.startproject
+    if x:
         write_config_template()
         write_manager()
         start_dataset()
+        set_project(x)
 
 
 if __name__ == '__main__':
