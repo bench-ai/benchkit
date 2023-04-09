@@ -119,8 +119,8 @@ def main():
 
     args = parser.parse_args()
 
-    if args.login:
-        login_manual()
+    # if args.login:
+    #     login_manual()
 
     if args.version:
         print_version()
