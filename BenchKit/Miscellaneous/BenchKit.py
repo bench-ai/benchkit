@@ -27,15 +27,17 @@ def login():
 def logout():
     AuthenticatedUser.logout()
 
-    cred_dict = {
-        "user_credentials": {
-            "username": "",
-            "password": ""
-        }
-    }
-
-    set_config(cred_dict)
-    write_config()
+    # cred_dict = {
+    #     "user_credentials": {
+    #         "username": "",
+    #         "password": ""
+    #     }
+    # }
+    #
+    # set_config(cred_dict)
+    # write_config()
+    write_config_template()
+    set_settings()
 
 
 def login_manual():
@@ -53,7 +55,6 @@ def login_manual():
     login()
     write_config()
 
-
 def write_config_template():
     template_path = Path(__file__).resolve().parent / "configtemplate.txt"
     with open(template_path, "r") as f:
@@ -62,6 +63,7 @@ def write_config_template():
             while line:
                 file.write(line)
                 line = f.readline()
+    write_config()
 
 
 def write_config():
