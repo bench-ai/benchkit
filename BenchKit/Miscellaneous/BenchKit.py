@@ -6,6 +6,7 @@ import argparse
 import getpass
 from BenchKit.Data.Helpers import create_dataset_dir
 from .User import AuthenticatedUser, Credential, get_user_project
+import os
 
 
 def set_settings():
@@ -70,11 +71,13 @@ def write_config():
 def write_manager():
     template_path = Path(__file__).resolve().parent / "manage.txt"
     with open(template_path, "r") as f:
-        with open("manage.py", "w") as file:
-            line = f.readline()
-            while line:
-                file.write(line)
+
+        if not os.path.isfile("manage.py"):
+            with open("manage.py", "w") as file:
                 line = f.readline()
+                while line:
+                    file.write(line)
+                    line = f.readline()
 
 
 def set_project(project_name: str):

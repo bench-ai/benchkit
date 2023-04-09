@@ -443,7 +443,7 @@ def iterate_directory(file_dir: str,
 
 def create_dataset_dir():
     if os.path.isdir("./Datasets"):
-        raise IsADirectoryError("Datasets directory already exists")
+        pass
     else:
         current_path = "./Datasets"
         os.mkdir(current_path)
