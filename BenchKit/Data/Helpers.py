@@ -1,4 +1,6 @@
+import json
 import os
+import requests
 from colorama import Fore, Style
 from concurrent.futures import ThreadPoolExecutor
 import numpy as np
@@ -6,18 +8,34 @@ import torch
 from torch.utils.data import DataLoader
 import shutil
 import pathlib
-import boto3.s3.transfer as s3transfer
 from tqdm import tqdm
-from BenchKit.Data.Datasets import ProcessorDataset, ChunkDataset
+from BenchKit.Data.Datasets import ProcessorDataset
+from BenchKit.Miscellaneous.User import create_dataset, get_post_url
 
 megabyte = 1_024 ** 2
 gigabyte = megabyte * 1024
 terabyte = gigabyte * 1024
-limit = 100 * megabyte
+limit = 30 * megabyte
 
 
 class UploadError(Exception):
     pass
+
+
+# Test this in benchkit migrate to bench kit
+
+def upload_file(url,
+                file_path,
+                save_path,
+                fields):
+    with open(file_path, 'rb') as f:
+        files = {'file': (save_path, f)}
+        http_response = requests.post(url,
+                                      data=fields,
+                                      files=files)
+
+    if http_response.status_code != 204:
+        raise RuntimeError(f"Failed to Upload {file_path}")
 
 
 def process_datasets(processed_dataset: ProcessorDataset,
@@ -41,6 +59,9 @@ def process_datasets(processed_dataset: ProcessorDataset,
 
     if not skip:
 
+        dataset_dict = create_dataset(dataset_name,
+                                      cfg["project"]["id"])
+
         print(Fore.RED + "Started Data processing" + Style.RESET_ALL)
         is_2 = False
         for i in DataLoader(processed_dataset, batch_size=1):
@@ -55,13 +76,17 @@ def process_datasets(processed_dataset: ProcessorDataset,
 
         affirm_size(ds_list[-1]["path"])
 
+        ds_list[-1]["info"] = dataset_dict
+
         set_config({"datasets": ds_list})
         cfg["datasets"] = ds_list
 
         write_config()
         print(Fore.GREEN + "Data is processed" + Style.RESET_ALL)
 
-    dl = DataLoader(dataset=chunk_dataset(dataset_name, *args, **kwargs), num_workers=4, batch_size=16)
+    dl = DataLoader(dataset=chunk_dataset(dataset_name, False, *args, **kwargs),
+                    num_workers=4,
+                    batch_size=16)
 
     if ds:
         if not ds.get("test"):
@@ -83,6 +108,48 @@ def process_datasets(processed_dataset: ProcessorDataset,
         write_config()
 
     print(Fore.GREEN + "Data Loading Test Passed" + Style.RESET_ALL)
+
+    print(Fore.RED + "Started Upload" + Style.RESET_ALL)
+
+    save_path = ds["path"]
+
+    for path in tqdm(iterate_directory(save_path, ds["info"]["last_file_number"]),
+                     total=(len(os.listdir(save_path)) - ds["info"]["last_file_number"]),
+                     colour="blue"):
+        response = get_post_url(i["info"]["id"],
+                                os.path.getsize(path),
+                                os.path.split(path)[-1])
+
+        resp = json.loads(response.content)
+        upload_file(resp["url"],
+                    path,
+                    os.path.split(path)[-1],
+                    resp["fields"])
+
+        ds_list = get_config()["datasets"]
+        ds_list[-1]["info"] = create_dataset(dataset_name,
+                                             cfg["project"]["id"])
+
+        set_config({"datasets": ds_list})
+        cfg["datasets"] = ds_list
+        write_config()
+
+    print(Fore.GREEN + "Finished Upload" + Style.RESET_ALL)
+
+    dl = DataLoader(dataset=chunk_dataset(dataset_name, True, *args, **kwargs),
+                    num_workers=4,
+                    batch_size=16)
+
+    print(Fore.RED + "Cloud Online Epoch Test" + Style.RESET_ALL)
+    size = 0
+    for batch in tqdm(dl, colour="blue"):
+        labels, _ = batch
+        size += labels.size()[0]
+
+    for i in os.listdir("."):
+        if i.startswith("TempData"):
+            shutil.rmtree(i)
+    print(Fore.GREEN + "Passed Online Epoch Test" + Style.RESET_ALL)
 
 
 def copy_file(folder_path: str,
@@ -317,7 +384,10 @@ def merge_folders(small_folder: str, large_folder: str, save_folder: str):
     os.remove(large_folder)
     shutil.rmtree(small_path)
 
-    shutil.make_archive(large_folder,
+    head, tail = os.path.split(large_folder)
+
+    f_name = tail.split(".")[0]
+    shutil.make_archive(f"{head}/{f_name}",
                         "zip",
                         large_path)
 
@@ -332,7 +402,7 @@ def affirm_size(save_folder: str):
     fails_size_requirement = []
 
     if get_dir_size(save_folder) < megabyte * 100:
-        raise RuntimeError("Dataset must be greater than 300 megabytes")
+        raise RuntimeError("Dataset must be greater than 100 megabytes")
 
     for i in os.listdir(save_folder):
         path: str = os.path.join(save_folder, i)
@@ -350,7 +420,7 @@ def affirm_size(save_folder: str):
 
         size = os.path.getsize(large_folder)
 
-        if size >= megabyte * 100:
+        if size >= limit:
             pass_size_requirement.append(fails_size_requirement.pop(0))
 
     if len(pass_size_requirement) > 0:
@@ -364,15 +434,11 @@ def affirm_size(save_folder: str):
             pass_size_requirement.insert(0, large_folder)
 
 
-def iterate_directory(file_dir: str) -> tuple[str, bool]:
-    with os.scandir(file_dir) as walk:
-        for i in walk:
-            if os.path.isfile(i):
-                yield str(pathlib.Path(file_dir).resolve() / i.name), False
-            elif os.path.isdir(i):
-                new_path = pathlib.Path(file_dir).resolve() / i.name
-                yield str(new_path) + "/", True
-                yield from iterate_directory(new_path)
+def iterate_directory(file_dir: str,
+                      current_file: int) -> tuple[str, bool]:
+    for idx, i in enumerate(os.listdir(file_dir)):
+        if idx >= current_file:
+            yield str(pathlib.Path(file_dir).resolve() / i)
 
 
 def create_dataset_dir():
@@ -399,26 +465,3 @@ def create_dataset_dir():
             file.write("def main():\n")
             file.write("    # Write your data loading code here\n")
             file.write("    pass\n")
-
-
-def upload_file(session,
-                bucketname,
-                s3dir,
-                file_list,
-                progress_func,
-                workers=10):
-    s3client = session.client('s3')
-    transfer_config = s3transfer.TransferConfig(
-        use_threads=True,
-        max_concurrency=workers,
-        multipart_threshold=100 * megabyte,
-        multipart_chunksize=16 * megabyte,
-    )
-
-    for src in file_list:
-        dst = os.path.join(s3dir, os.path.basename(src))
-        x = s3client.upload_file(src,
-                                 bucketname,
-                                 dst,
-                                 Config=transfer_config,
-                                 Callback=progress_func)

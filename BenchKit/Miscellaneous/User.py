@@ -33,7 +33,7 @@ def authorize_response(func):
                 if response.status_code == 200:
                     return response
 
-            raise Credential("Unable to run method, credentials not verifiable")
+            raise Credential(f"Unable to run method, credentials not verifiable code:{response.status_code}")
         else:
             return response
 
@@ -50,10 +50,113 @@ class UnknownRequest(Exception):
 
 def get_current_user() -> dict:
     request_url = os.path.join(get_main_url(), "api", "auth", "user", "current")
-
-    access, _ = AuthenticatedUser.read_credentials()
     response = request_executor("get",
                                 url=request_url)
+
+    return json.loads(response.content)
+
+
+def create_dataset(dataset_name: str,
+                   project_id: str):
+    request_url = os.path.join("http://localhost:8000/", "api", "dataset", "user", "list")
+
+    try:
+        response = request_executor("post",
+                                    url=request_url,
+                                    json={
+                                        "name": dataset_name,
+                                        "project": project_id,
+                                        "raw": True})
+
+        code = 200
+    except Credential as e:
+        code = int(str(e).split(":")[-1])
+
+    if code == 409:
+        response = request_executor("get",
+                                    url=request_url,
+                                    params={"page": 1,
+                                            "name": dataset_name,
+                                            "raw": True})
+
+        if response.status_code == 200:
+            return json.loads(response.content)["datasets"][0]
+        else:
+            raise RuntimeError("Unable to find Dataset")
+    elif code == 200:
+        return json.loads(response.content)
+    else:
+        raise RuntimeError("Unable to create Dataset")
+
+
+def get_user_project(project_name: str) -> dict:
+    request_url = os.path.join("http://localhost:8000/", "api", "project", "user", "list")
+
+    response = request_executor("get",
+                                url=request_url,
+                                params={"name": project_name,
+                                        "page": 1})
+
+    if response.status_code != 200:
+        raise RuntimeError("Project does not exists please register it on bench")
+    else:
+        return json.loads(response.content)["projects"][0]
+
+
+def get_post_url(dataset_id: str,
+                 file_size: int,
+                 file_path: str):
+    request_url = os.path.join("http://localhost:8000/", "api", "dataset", "upload")
+
+    response = request_executor("post",
+                                url=request_url,
+                                json={"dataset_id": dataset_id,
+                                      "file_size": file_size,
+                                      "file_key": file_path})
+
+    return response
+
+
+def delete_dataset(dataset_id: str):
+    request_url = os.path.join("http://localhost:8000/", "api", "dataset", "upload")
+
+    response = request_executor("delete",
+                                url=request_url,
+                                json={"dataset_id": dataset_id})
+
+    return response
+
+
+def get_dataset(dataset_id: str):
+    request_url = os.path.join("http://localhost:8000/", "api", "dataset", "get", "keys")
+
+    response = request_executor("get",
+                                url=request_url,
+                                params={"dataset_id": dataset_id})
+
+    content = json.loads(response.content)
+    data_list = []
+    data_list.extend([os.path.split(i)[-1] for i in content["key_list"]])
+
+    while content["last_key"]:
+        response = request_executor("get",
+                                    url=request_url,
+                                    params={"dataset_id": dataset_id,
+                                            "last_key": content["last_key"]})
+        content = json.loads(response.content)
+        data_list.extend([os.path.split(i)[-1] for i in content["key_list"]])
+
+    return data_list
+
+
+def get_get_url(dataset_id: str,
+                file_path: str):
+    request_url = os.path.join("http://localhost:8000/", "api", "dataset", "upload")
+
+    response = request_executor("get",
+                                url=request_url,
+                                params={"dataset_id": dataset_id,
+                                        "file_key": file_path})
 
     return json.loads(response.content)
 
@@ -68,8 +171,10 @@ def request_executor(req_type: str, **kwargs):
         response = requests.get(**kwargs)
     elif req_type.lower() == "put":
         response = requests.put(**kwargs)
+    elif req_type.lower() == "delete":
+        response = requests.delete(**kwargs)
     else:
-        raise UnknownRequest("Options are post, patch, get, put")
+        raise UnknownRequest("Options are post, patch, get, put, delete")
 
     return response
 
