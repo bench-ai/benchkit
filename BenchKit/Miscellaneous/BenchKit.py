@@ -27,7 +27,7 @@ def login():
 
 def logout():
     AuthenticatedUser.logout()
-    write_config_template()
+    write_config_template(lgn=False)
     set_settings()
 
 
@@ -47,7 +47,7 @@ def login_manual():
     write_config()
 
 
-def write_config_template():
+def write_config_template(lgn=True):
     template_path = Path(__file__).resolve().parent / "configtemplate.txt"
     with open(template_path, "r") as f:
         with open("Config.json", "w") as file:
@@ -57,7 +57,8 @@ def write_config_template():
                 line = f.readline()
 
     set_settings()
-    login_manual()
+    if lgn:
+        login_manual()
 
 
 def write_config():
