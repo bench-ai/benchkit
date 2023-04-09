@@ -55,6 +55,7 @@ def login_manual():
     login()
     write_config()
 
+
 def write_config_template():
     template_path = Path(__file__).resolve().parent / "configtemplate.txt"
     with open(template_path, "r") as f:
@@ -63,8 +64,8 @@ def write_config_template():
             while line:
                 file.write(line)
                 line = f.readline()
-    write_config()
 
+    set_settings()
 
 def write_config():
     cfg = Path(__file__).resolve().parent / "Config.json"
