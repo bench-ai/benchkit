@@ -15,7 +15,7 @@ from BenchKit.Miscellaneous.User import create_dataset, get_post_url
 megabyte = 1_024 ** 2
 gigabyte = megabyte * 1024
 terabyte = gigabyte * 1024
-limit = 100 * megabyte
+limit = 30 * megabyte
 
 
 class UploadError(Exception):
@@ -23,7 +23,6 @@ class UploadError(Exception):
 
 
 # Test this in benchkit migrate to bench kit
-# Test reads, delete project Dataset and temp processes
 
 def upload_file(url,
                 file_path,
@@ -85,7 +84,7 @@ def process_datasets(processed_dataset: ProcessorDataset,
         write_config()
         print(Fore.GREEN + "Data is processed" + Style.RESET_ALL)
 
-    dl = DataLoader(dataset=chunk_dataset(dataset_name, *args, **kwargs),
+    dl = DataLoader(dataset=chunk_dataset(dataset_name, False, *args, **kwargs),
                     num_workers=4,
                     batch_size=16)
 
@@ -137,9 +136,20 @@ def process_datasets(processed_dataset: ProcessorDataset,
 
     print(Fore.GREEN + "Finished Upload" + Style.RESET_ALL)
 
+    dl = DataLoader(dataset=chunk_dataset(dataset_name, True, *args, **kwargs),
+                    num_workers=4,
+                    batch_size=16)
+
+    print(Fore.RED + "Cloud Online Epoch Test" + Style.RESET_ALL)
+    size = 0
+    for batch in tqdm(dl, colour="blue"):
+        labels, _ = batch
+        size += labels.size()[0]
+
     for i in os.listdir("."):
-        if i.startswith("TempData-Process"):
+        if i.startswith("TempData"):
             shutil.rmtree(i)
+    print(Fore.GREEN + "Passed Online Epoch Test" + Style.RESET_ALL)
 
 
 def copy_file(folder_path: str,
@@ -410,7 +420,7 @@ def affirm_size(save_folder: str):
 
         size = os.path.getsize(large_folder)
 
-        if size >= megabyte * 100:
+        if size >= limit:
             pass_size_requirement.append(fails_size_requirement.pop(0))
 
     if len(pass_size_requirement) > 0:

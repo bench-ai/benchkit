@@ -2,7 +2,9 @@ import argparse
 from BenchKit.Miscellaneous.Settings import get_config, set_config
 from BenchKit.Miscellaneous.BenchKit import write_config_template, set_project, set_settings
 from Datasets.ProjectDatasets import main
+from BenchKit.Miscellaneous.User import delete_dataset
 import shutil
+
 
 def create_datasets():
     main()
@@ -29,6 +31,11 @@ def cli():
     if args.clear:
         project_name = get_config()["project"]["name"]
         user_creds = get_config()["user_credentials"]
+        datasets = get_config()["datasets"]
+        for i in datasets:
+            d_id = i["info"]["id"]
+            delete_dataset(d_id)
+
         clear()
         write_config_template()
         set_settings()

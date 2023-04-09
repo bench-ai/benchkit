@@ -127,6 +127,40 @@ def delete_dataset(dataset_id: str):
     return response
 
 
+def get_dataset(dataset_id: str):
+    request_url = os.path.join("http://localhost:8000/", "api", "dataset", "get", "keys")
+
+    response = request_executor("get",
+                                url=request_url,
+                                params={"dataset_id": dataset_id})
+
+    content = json.loads(response.content)
+    data_list = []
+    data_list.extend([os.path.split(i)[-1] for i in content["key_list"]])
+
+    while content["last_key"]:
+        response = request_executor("get",
+                                    url=request_url,
+                                    params={"dataset_id": dataset_id,
+                                            "last_key": content["last_key"]})
+        content = json.loads(response.content)
+        data_list.extend([os.path.split(i)[-1] for i in content["key_list"]])
+
+    return data_list
+
+
+def get_get_url(dataset_id: str,
+                file_path: str):
+    request_url = os.path.join("http://localhost:8000/", "api", "dataset", "upload")
+
+    response = request_executor("get",
+                                url=request_url,
+                                params={"dataset_id": dataset_id,
+                                        "file_key": file_path})
+
+    return json.loads(response.content)
+
+
 @authorize_response
 def request_executor(req_type: str, **kwargs):
     if req_type.lower() == "post":
