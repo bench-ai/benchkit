@@ -9,10 +9,8 @@ cloud through a PyTorch-Django based framework.
   * [Pip Install](#pip-install)
   * [Check install](#check-install)
 * [Authentication](#authentication)
-  * [Login](#login)
+  * Register a Project on [Bench](https://bench-ai.com/)
   * [Logout](#logout)
-* Register a Project on [Bench](https://bench-ai.com/)
-* Start a [BenchKit Project](#start-project)
 * Define a Model
 * [Dataloaders](#dataloaders)
   * [ProcessorDataset](#processordataset)
@@ -64,19 +62,9 @@ Logging in is required to use any core functionalities in the
 library
 
 To log in simply provide your username and password to your bench 
-account upon invoking the following commands
+account upon starting a project
 
-### Login
-```bash
-bench-kit --login
-```
-
-### Logout
-```bash
-bench-kit --logout
-```
-___
-## Start Project
+### Start Project
 All code that you wish to migrate to the cloud must be written
 inside a project.
 
@@ -87,11 +75,13 @@ Projects have three key features
 
 All Key Parts familiar to any ML practitioner
 
-Starting a project is extremely simple
-
-Type
 ```bash
-bench-kit --startproject
+bench-kit --startproject <project_name>
+```
+
+### Logout
+```bash
+bench-kit --logout
 ```
 ---
 ## Dataloaders
@@ -211,7 +201,7 @@ def main():
 ---
 ## Cloud Migration
 
-Congrat you are now ready to migrate your bench project, for some
+Congrats you are now ready to migrate your bench project, for some
 _fast_ cloud training.
 
 This can all be done with one simple line

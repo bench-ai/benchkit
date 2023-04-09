@@ -73,12 +73,11 @@ def write_manager():
     template_path = Path(__file__).resolve().parent / "manage.txt"
     with open(template_path, "r") as f:
 
-        if not os.path.isfile("manage.py"):
-            with open("manage.py", "w") as file:
+        with open("manage.py", "w") as file:
+            line = f.readline()
+            while line:
+                file.write(line)
                 line = f.readline()
-                while line:
-                    file.write(line)
-                    line = f.readline()
 
 
 def set_project(project_name: str):
@@ -97,10 +96,6 @@ def print_version():
 
 def main():
     parser = argparse.ArgumentParser()
-    # parser.add_argument("-in",
-    #                     "--login",
-    #                     action='store_true',
-    #                     required=False)
 
     parser.add_argument("-v",
                         "--version",
@@ -122,9 +117,6 @@ def main():
                         required=False)
 
     args = parser.parse_args()
-
-    # if args.login:
-    #     login_manual()
 
     if args.version:
         print_version()
