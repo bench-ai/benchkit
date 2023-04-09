@@ -26,16 +26,6 @@ def login():
 
 def logout():
     AuthenticatedUser.logout()
-
-    # cred_dict = {
-    #     "user_credentials": {
-    #         "username": "",
-    #         "password": ""
-    #     }
-    # }
-    #
-    # set_config(cred_dict)
-    # write_config()
     write_config_template()
     set_settings()
 
@@ -66,6 +56,8 @@ def write_config_template():
                 line = f.readline()
 
     set_settings()
+    login_manual()
+
 
 def write_config():
     cfg = Path(__file__).resolve().parent / "Config.json"
@@ -101,10 +93,10 @@ def print_version():
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-in",
-                        "--login",
-                        action='store_true',
-                        required=False)
+    # parser.add_argument("-in",
+    #                     "--login",
+    #                     action='store_true',
+    #                     required=False)
 
     parser.add_argument("-v",
                         "--version",
