@@ -117,6 +117,16 @@ def get_post_url(dataset_id: str,
     return response
 
 
+def delete_dataset(dataset_id: str):
+    request_url = os.path.join("http://localhost:8000/", "api", "dataset", "upload")
+
+    response = request_executor("delete",
+                                url=request_url,
+                                json={"dataset_id": dataset_id})
+
+    return response
+
+
 @authorize_response
 def request_executor(req_type: str, **kwargs):
     if req_type.lower() == "post":
@@ -127,8 +137,10 @@ def request_executor(req_type: str, **kwargs):
         response = requests.get(**kwargs)
     elif req_type.lower() == "put":
         response = requests.put(**kwargs)
+    elif req_type.lower() == "delete":
+        response = requests.delete(**kwargs)
     else:
-        raise UnknownRequest("Options are post, patch, get, put")
+        raise UnknownRequest("Options are post, patch, get, put, delete")
 
     return response
 

@@ -21,10 +21,9 @@ limit = 100 * megabyte
 class UploadError(Exception):
     pass
 
-# create a way to continue a upload
-# create a way to delete all uploaded files
+
 # Test this in benchkit migrate to bench kit
-# fix the multiple folder issue
+# Test reads, delete project Dataset and temp processes
 
 def upload_file(url,
                 file_path,
@@ -116,7 +115,7 @@ def process_datasets(processed_dataset: ProcessorDataset,
     save_path = ds["path"]
 
     for path in tqdm(iterate_directory(save_path, ds["info"]["last_file_number"]),
-                     total=len(os.listdir(save_path)),
+                     total=(len(os.listdir(save_path)) - ds["info"]["last_file_number"]),
                      colour="blue"):
         response = get_post_url(i["info"]["id"],
                                 os.path.getsize(path),
@@ -128,7 +127,19 @@ def process_datasets(processed_dataset: ProcessorDataset,
                     os.path.split(path)[-1],
                     resp["fields"])
 
+        ds_list = get_config()["datasets"]
+        ds_list[-1]["info"] = create_dataset(dataset_name,
+                                             cfg["project"]["id"])
+
+        set_config({"datasets": ds_list})
+        cfg["datasets"] = ds_list
+        write_config()
+
     print(Fore.GREEN + "Finished Upload" + Style.RESET_ALL)
+
+    for i in os.listdir("."):
+        if i.startswith("TempData-Process"):
+            shutil.rmtree(i)
 
 
 def copy_file(folder_path: str,
@@ -314,8 +325,6 @@ def merge_folders(small_folder: str, large_folder: str, save_folder: str):
     small_path = os.path.join(save_folder, os.path.split(small_folder)[-1].split(".")[0])
     large_path = os.path.join(save_folder, os.path.split(large_folder)[-1].split(".")[0])
 
-    print(large_path)
-
     shutil.unpack_archive(small_folder, small_path)
     shutil.unpack_archive(large_folder, large_path)
 
@@ -383,7 +392,7 @@ def affirm_size(save_folder: str):
     fails_size_requirement = []
 
     if get_dir_size(save_folder) < megabyte * 100:
-        raise RuntimeError("Dataset must be greater than 300 megabytes")
+        raise RuntimeError("Dataset must be greater than 100 megabytes")
 
     for i in os.listdir(save_folder):
         path: str = os.path.join(save_folder, i)
