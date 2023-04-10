@@ -15,7 +15,7 @@ from BenchKit.Miscellaneous.User import create_dataset, get_post_url
 megabyte = 1_024 ** 2
 gigabyte = megabyte * 1024
 terabyte = gigabyte * 1024
-limit = 30 * megabyte
+limit = 100 * megabyte
 
 
 class UploadError(Exception):
@@ -138,7 +138,7 @@ def process_datasets(processed_dataset: ProcessorDataset,
 
     dl = DataLoader(dataset=chunk_dataset(dataset_name, True, *args, **kwargs),
                     num_workers=4,
-                    batch_size=16)
+                    batch_size=32)
 
     print(Fore.RED + "Cloud Online Epoch Test" + Style.RESET_ALL)
     size = 0
