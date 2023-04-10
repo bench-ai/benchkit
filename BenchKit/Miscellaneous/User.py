@@ -58,7 +58,7 @@ def get_current_user() -> dict:
 
 def create_dataset(dataset_name: str,
                    project_id: str):
-    request_url = os.path.join("http://localhost:8000/", "api", "dataset", "user", "list")
+    request_url = os.path.join(get_main_url(), "api", "dataset", "user", "list")
 
     try:
         response = request_executor("post",
@@ -90,7 +90,7 @@ def create_dataset(dataset_name: str,
 
 
 def get_user_project(project_name: str) -> dict:
-    request_url = os.path.join("http://localhost:8000/", "api", "project", "user", "list")
+    request_url = os.path.join(get_main_url(), "api", "project", "user", "list")
 
     response = request_executor("get",
                                 url=request_url,
@@ -106,7 +106,7 @@ def get_user_project(project_name: str) -> dict:
 def get_post_url(dataset_id: str,
                  file_size: int,
                  file_path: str):
-    request_url = os.path.join("http://localhost:8000/", "api", "dataset", "upload")
+    request_url = os.path.join(get_main_url(), "api", "dataset", "upload")
 
     response = request_executor("post",
                                 url=request_url,
@@ -118,7 +118,7 @@ def get_post_url(dataset_id: str,
 
 
 def delete_dataset(dataset_id: str):
-    request_url = os.path.join("http://localhost:8000/", "api", "dataset", "upload")
+    request_url = os.path.join(get_main_url(), "api", "dataset", "upload")
 
     response = request_executor("delete",
                                 url=request_url,
@@ -128,7 +128,7 @@ def delete_dataset(dataset_id: str):
 
 
 def get_dataset(dataset_id: str):
-    request_url = os.path.join("http://localhost:8000/", "api", "dataset", "get", "keys")
+    request_url = os.path.join(get_main_url(), "api", "dataset", "get", "keys")
 
     response = request_executor("get",
                                 url=request_url,
@@ -151,7 +151,7 @@ def get_dataset(dataset_id: str):
 
 def get_get_url(dataset_id: str,
                 file_path: str):
-    request_url = os.path.join("http://localhost:8000/", "api", "dataset", "upload")
+    request_url = os.path.join(get_main_url(), "api", "dataset", "upload")
 
     response = request_executor("get",
                                 url=request_url,
