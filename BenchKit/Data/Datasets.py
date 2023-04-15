@@ -6,7 +6,7 @@ from torch.utils.data import Dataset
 from typing import Any, final
 import shutil
 import multiprocessing
-
+from accelerate import Accelerator
 from BenchKit.Miscellaneous.Settings import get_config
 from BenchKit.Miscellaneous.User import get_dataset, get_get_url
 
@@ -29,40 +29,61 @@ class ProcessorDataset(Dataset):
         return (cur_num, cur_file) if cur_file else (cur_num,)
 
 
-# Add the ability to use accelerate
-# Change code so it works using multiple gpu's
-# -- This means that locks and events have to be gpu specific
-# -- make a new lock class
-# Also you need to change it so that the dataset size is in the zip name
-# -- This allows any process to continue from any dataset slice
-# after this make an accelerated model and see if this works
-
 class ChunkDataset(Dataset):
 
     @staticmethod
-    def update_process_count(process_name: str | None = None) -> int:
+    def update_process_count(process_name: str,
+                             gpu_process: int) -> int:
+
+        lock.acquire()
+        gpu_process = str(gpu_process)
         with open("Process.json", "r") as j:
             process_dict = json.load(j)
 
-            if process_name:
-                process_dict["process_list"].append(process_name)
+            process_list = process_dict.get(gpu_process)
+
+            if process_list:
+                process_list.append(process_name)
+            else:
+                process_dict[gpu_process] = [process_name]
 
         with open("Process.json", "w") as j:
             json.dump(process_dict, j)
 
-        # lock.release()
-        return len(process_dict["process_list"])
+        lock.release()
+        return len(process_dict[gpu_process])
 
     @staticmethod
     def new_process_json():
+        lock.acquire()
         with open("Process.json", "w") as file:
-            json.dump({"process_list": []}, file)
+            json.dump({}, file)
+        lock.release()
 
-    # here add gpu count
-    # add num workers per gpu this number should depend on the gpu the user plans to use
+    @staticmethod
+    def reset_process_list(gpu_process: int):
+        lock.acquire()
+        gpu_process = str(gpu_process)
+
+        with open("Process.json", "r") as file:
+            json_dict = json.load(file)
+
+        json_dict[gpu_process] = []
+
+        with open("Process.json", "w") as j:
+            json.dump(json_dict, j)
+
+        lock.release()
+
     def __init__(self,
                  name: str,
-                 cloud: bool):
+                 cloud: bool,
+                 acc: Accelerator,
+                 num_workers: int):
+
+        self._accelerator = acc
+        self._num_gpu_process = self._accelerator.num_processes
+        self._num_workers = num_workers
 
         cfg = get_config()
 
@@ -83,15 +104,16 @@ class ChunkDataset(Dataset):
 
         if not cloud:
             self._chunk_list = [os.path.join(chunk_path, chunk) for chunk in os.listdir(chunk_path)]
-            print(self._chunk_list)
         else:
             self._chunk_list = get_dataset(dataset_id)
 
+        self._chunk_list = sorted(self._chunk_list, key=lambda x: int(os.path.split(x)[-1].split("-")[1]))
         self._dataset_length = dataset_len
 
         self._pos = len(self._label_chunk)
         self._prev_doc_len = 0
-        self._write_file_event = multiprocessing.Event()
+
+        self._event_dict = {str(i): multiprocessing.Event() for i in range(self._num_gpu_process)}
 
     def unzip_labels_and_files(self,
                                current_chunk: str,
@@ -165,25 +187,25 @@ class ChunkDataset(Dataset):
             return None
 
     def __getitem__(self, idx):
-
         if idx >= self._pos:
-            lock.acquire()
-            p_len = ChunkDataset.update_process_count(str(os.getpid()))
+            p_len = ChunkDataset.update_process_count(str(os.getpid()),
+                                                      self._accelerator.process_index)
             self._prev_doc_len += len(self._label_chunk)
-            c1, c2 = self.set_new_chunk_path()
 
-            if p_len == 4:
+            while idx >= self._pos:
+                c1, c2 = self.set_new_chunk_path()
+                curr_len = int(os.path.split(c1)[-1].split("-")[2])
+                self._pos += curr_len
+
+            if p_len == self._num_workers:
                 self.unzip_labels_and_files(c1, c2)
-                ChunkDataset.new_process_json()
-                self._write_file_event.set()
-                lock.release()
-                self._write_file_event.clear()
+                ChunkDataset.reset_process_list(self._accelerator.process_index)
+                self._event_dict[str(self._accelerator.process_index)].set()
+                self._event_dict[str(self._accelerator.process_index)].clear()
             else:
-                lock.release()
-                self._write_file_event.wait()
+                self._event_dict[str(self._accelerator.process_index)].wait()
 
             self._set_new_data()
-            self._pos += len(self._label_chunk)
 
         file_tup = self.get_files(idx - self._prev_doc_len)
         if file_tup:
