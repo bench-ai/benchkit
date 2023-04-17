@@ -11,7 +11,6 @@ import pathlib
 from tqdm import tqdm
 from BenchKit.Data.Datasets import ProcessorDataset
 from BenchKit.Miscellaneous.User import create_dataset, get_post_url
-from accelerate import Accelerator
 
 megabyte = 1_024 ** 2
 gigabyte = megabyte * 1024
@@ -23,7 +22,43 @@ class UploadError(Exception):
     pass
 
 
-# Test this in benchkit migrate to bench kit
+def get_dataset(chunk_class,
+                dataset_name: str,
+                batch_size: int,
+                num_workers: int,
+                *args,
+                **kwargs):
+
+    from BenchKit.Miscellaneous.Settings import get_config
+
+    cfg = get_config()
+    ds = None
+
+    for i in cfg["datasets"]:
+        if i["name"] == dataset_name:
+            skip = True
+            ds = i
+            break
+
+    dl = DataLoader(dataset=chunk_class(dataset_name,
+                                        True,
+                                        ds["length"],
+                                        *args,
+                                        **kwargs),
+                    num_workers=num_workers,
+                    batch_size=batch_size,
+                    worker_init_fn=chunk_class.worker_init_fn)
+
+    return dl
+
+
+def remove_all_temps():
+
+    for i in os.listdir("."):
+        if i.startswith("Temp"):
+            shutil.rmtree(os.path.join(".", i))
+
+
 
 def upload_file(url,
                 file_path,
@@ -42,19 +77,14 @@ def upload_file(url,
 def process_datasets(processed_dataset: ProcessorDataset,
                      chunk_dataset,
                      dataset_name: str,
-                     cpu=False,
                      *args,
                      **kwargs):
+
     from BenchKit.Miscellaneous.BenchKit import set_settings, write_config
     from BenchKit.Miscellaneous.Settings import get_config, set_config
     set_settings()
 
-    num_workers = 4
-
-    if cpu:
-        acc = Accelerator(cpu=True)
-    else:
-        acc = Accelerator()
+    num_workers = 2
 
     skip = False
     cfg = get_config()
@@ -93,23 +123,27 @@ def process_datasets(processed_dataset: ProcessorDataset,
         write_config()
         print(Fore.GREEN + "Data is processed" + Style.RESET_ALL)
 
+    length = ds["length"] if ds else ds_list[-1]["length"]
+
     dl = DataLoader(dataset=chunk_dataset(dataset_name,
                                           False,
-                                          acc,
-                                          num_workers,
+                                          length,
                                           *args,
                                           **kwargs),
                     num_workers=num_workers,
-                    batch_size=16)
+                    batch_size=16,
+                    worker_init_fn=chunk_dataset.worker_init_fn)
 
     if ds:
         if not ds.get("test"):
             print(Fore.RED + "Running Data Loading test" + Style.RESET_ALL)
-            for _ in tqdm(dl, colour="blue"):
+            for _ in tqdm(dl, colour="blue", total=int(np.ceil(length / 16)) + 1):
                 pass
     else:
-        for _ in tqdm(dl, colour="blue"):
+        for _ in tqdm(dl, colour="blue", total=int(np.ceil(length / 16)) + 1):
             pass
+
+    remove_all_temps()
 
     for idx, i in enumerate(cfg["datasets"]):
         if i["name"] == dataset_name:
@@ -152,22 +186,19 @@ def process_datasets(processed_dataset: ProcessorDataset,
 
     dl = DataLoader(dataset=chunk_dataset(dataset_name,
                                           True,
-                                          acc,
-                                          num_workers,
+                                          length,
                                           *args,
                                           **kwargs),
                     num_workers=num_workers,
-                    batch_size=32)
+                    batch_size=32,
+                    worker_init_fn=chunk_dataset.worker_init_fn)
 
     print(Fore.RED + "Cloud Online Epoch Test" + Style.RESET_ALL)
-    size = 0
-    for batch in tqdm(dl, colour="blue"):
+    for batch in tqdm(dl, colour="blue", total=int(np.ceil(length / 32)) + 1):
         labels, _ = batch
-        size += labels.size()[0]
 
-    for i in os.listdir("."):
-        if i.startswith("TempData"):
-            shutil.rmtree(i)
+    remove_all_temps()
+
     print(Fore.GREEN + "Passed Online Epoch Test" + Style.RESET_ALL)
 
 
@@ -483,7 +514,7 @@ def create_dataset_dir():
         with open(whole_path, "w") as file:
             file.write("from BenchKit.Data.Datasets import ProcessorDataset, ChunkDataset\n")
             file.write("from BenchKit.Data.Helpers import process_datasets\n")
-            file.write("from accelerate import accelerator")
+            file.write("from accelerate import accelerator\n")
             file.write("# Write your datasets or datapipes here")
             file.write("\n")
             file.write("\n")

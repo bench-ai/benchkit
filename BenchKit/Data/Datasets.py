@@ -1,16 +1,13 @@
-import json
+import math
 import os
+import uuid
 import requests
 import torch
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, IterableDataset
 from typing import Any, final
 import shutil
-import multiprocessing
-from accelerate import Accelerator
 from BenchKit.Miscellaneous.Settings import get_config
 from BenchKit.Miscellaneous.User import get_dataset, get_get_url
-
-lock = multiprocessing.Lock()
 
 
 class ProcessorDataset(Dataset):
@@ -29,65 +26,16 @@ class ProcessorDataset(Dataset):
         return (cur_num, cur_file) if cur_file else (cur_num,)
 
 
-class ChunkDataset(Dataset):
-
-    @staticmethod
-    def update_process_count(process_name: str,
-                             gpu_process: int) -> int:
-
-        lock.acquire()
-        gpu_process = str(gpu_process)
-        with open("Process.json", "r") as j:
-            process_dict = json.load(j)
-
-            process_list = process_dict.get(gpu_process)
-
-            if process_list:
-                process_list.append(process_name)
-            else:
-                process_dict[gpu_process] = [process_name]
-
-        with open("Process.json", "w") as j:
-            json.dump(process_dict, j)
-
-        lock.release()
-        return len(process_dict[gpu_process])
-
-    @staticmethod
-    def new_process_json():
-        lock.acquire()
-        with open("Process.json", "w") as file:
-            json.dump({}, file)
-        lock.release()
-
-    @staticmethod
-    def reset_process_list(gpu_process: int):
-        lock.acquire()
-        gpu_process = str(gpu_process)
-
-        with open("Process.json", "r") as file:
-            json_dict = json.load(file)
-
-        json_dict[gpu_process] = []
-
-        with open("Process.json", "w") as j:
-            json.dump(json_dict, j)
-
-        lock.release()
+class IterableChunk(IterableDataset):
 
     def __init__(self,
                  name: str,
                  cloud: bool,
-                 acc: Accelerator,
-                 num_workers: int):
+                 length: int):
 
-        self._accelerator = acc
-        self._num_gpu_process = self._accelerator.num_processes
-        self._num_workers = num_workers
+        self._cloud = cloud
 
         cfg = get_config()
-
-        ChunkDataset.new_process_json()
 
         for i in cfg.get("datasets"):
             if i["name"] == name:
@@ -95,120 +43,153 @@ class ChunkDataset(Dataset):
                 dataset_len = i["length"]
                 dataset_id = i["info"]["id"]
 
-        self._label_chunk: list = []
-        self._file_chunk = None
-        self._chunk_path = None
+        if not cloud:
+            self.chunk_list = [os.path.join(chunk_path, chunk) for chunk in os.listdir(chunk_path)]
+        else:
+            self.chunk_list = get_dataset(dataset_id)
 
-        self._cloud = cloud
         self._dataset_id = dataset_id
 
-        if not cloud:
-            self._chunk_list = [os.path.join(chunk_path, chunk) for chunk in os.listdir(chunk_path)]
-        else:
-            self._chunk_list = get_dataset(dataset_id)
+        self.chunk_list = sorted(self.chunk_list, key=lambda x: int(os.path.split(x)[-1].split("-")[1]))
 
-        self._chunk_list = sorted(self._chunk_list, key=lambda x: int(os.path.split(x)[-1].split("-")[1]))
-        self._dataset_length = dataset_len
+        self.length = dataset_len
 
-        self._pos = len(self._label_chunk)
-        self._prev_doc_len = 0
+        self.start_index = 0
+        self.end_index = length
 
-        self._event_dict = {str(i): multiprocessing.Event() for i in range(self._num_gpu_process)}
+        self._process_id = f"Temp-{str(uuid.uuid4())}"
 
-    def unzip_labels_and_files(self,
-                               current_chunk: str,
-                               chunk_path: str):
+    def reset_root_dir(self) -> str:
+        root_dir = os.path.join(".", self._process_id)
 
-        root_dir = os.path.join(".", f"TempData")
+        if os.path.isdir(root_dir):
+            shutil.rmtree(root_dir)
+
+        return root_dir
+
+    @staticmethod
+    def delete_dir(uid: str):
+        root_dir = os.path.join(".", uid)
+
+        if os.path.isdir(root_dir):
+            shutil.rmtree(root_dir)
+
+    @staticmethod
+    def _set_new_data(folder_path):
+        folder_list = os.listdir(folder_path)
+
+        file_chunk = None
+        label_chunk = None
+        for i in folder_list:
+            path = os.path.join(folder_path, i)
+            if os.path.isdir(path):
+                file_chunk = sorted(os.listdir(path),
+                                    key=lambda x: int(x.split("-")[-1]))
+
+                file_chunk = [os.path.join(path, x) for x in file_chunk]
+            else:
+                label_chunk = torch.load(path)
+
+        return file_chunk, label_chunk
+
+    def unzip_local_data(self, current_file: str):
+
+        f_id = f"Temp-{str(uuid.uuid4())}"
+        root_dir = os.path.join(".", f_id)
 
         if os.path.isdir(root_dir):
             shutil.rmtree(root_dir)
 
         os.mkdir(root_dir)
+        chunk_path = os.path.join(root_dir,
+                                  os.path.split(current_file)[-1])
 
-        if not self._cloud:
+        shutil.unpack_archive(current_file, chunk_path)
 
-            try:
-                shutil.unpack_archive(current_chunk, chunk_path)
-            except FileExistsError:
-                pass
-        else:
+        return IterableChunk._set_new_data(chunk_path), f_id
 
-            file_data = get_get_url(dataset_id=self._dataset_id,
-                                    file_path=current_chunk)
+    def unzip_cloud_data(self, current_file: str):
+        f_id = f"Temp-{str(uuid.uuid4())}"
+        root_dir = os.path.join(".", f_id)
 
-            mem_zip = requests.get(file_data)
+        if os.path.isdir(root_dir):
+            shutil.rmtree(root_dir)
 
-            zip_dir = os.path.join(".", "TempData-zip")
-            if os.path.isdir(zip_dir):
-                shutil.rmtree(zip_dir)
+        file_data = get_get_url(dataset_id=self._dataset_id,
+                                file_path=current_file)
 
-            os.mkdir(zip_dir)
-            zip_path = os.path.join(zip_dir, os.path.split(current_chunk)[-1])
+        mem_zip = requests.get(file_data)
 
-            with open(zip_path, 'wb') as f:
-                f.write(mem_zip.content)
+        zip_dir = os.path.join(".", f"Temp-zip-{f_id}")
+        if os.path.isdir(zip_dir):
+            shutil.rmtree(zip_dir)
 
-            try:
-                shutil.unpack_archive(zip_path, chunk_path)
-            except FileExistsError:
-                pass
+        os.mkdir(zip_dir)
+        zip_path = os.path.join(zip_dir, os.path.split(current_file)[-1])
 
-    def set_new_chunk_path(self):
-        root_dir = os.path.join(".", f"TempData")
-        current_chunk = self._chunk_list.pop(0)
-        self._chunk_path = os.path.join(root_dir,
-                                        os.path.split(current_chunk)[-1])
+        with open(zip_path, 'wb') as f:
+            f.write(mem_zip.content)
 
-        return current_chunk, self._chunk_path
+        chunk_path = os.path.join(root_dir,
+                                  os.path.split(current_file)[-1])
 
-    def _set_new_data(self):
-        folder_list = os.listdir(self._chunk_path)
+        try:
+            shutil.unpack_archive(zip_path, chunk_path)
+        except FileExistsError:
+            pass
 
-        for i in folder_list:
-            path = os.path.join(self._chunk_path, i)
-            if os.path.isdir(path):
-                self._file_chunk = sorted(os.listdir(path),
-                                          key=lambda x: int(x.split("-")[-1]))
+        return IterableChunk._set_new_data(chunk_path), f_id
 
-                self._file_chunk = [os.path.join(path, x) for x in self._file_chunk]
-            else:
-                self._label_chunk = torch.load(path)
+    @staticmethod
+    def get_files(file_folder: str | None) -> list[str] | None:
 
-    def __len__(self):
-        return self._dataset_length
-
-    def get_files(self,
-                  idx: int) -> list[str] | None:
-
-        if self._file_chunk:
-            return [os.path.join(self._file_chunk[idx], i) for i in os.listdir(self._file_chunk[idx])]
+        if file_folder:
+            return [os.path.join(file_folder, i) for i in os.listdir(file_folder)]
         else:
             return None
 
-    def __getitem__(self, idx):
-        if idx >= self._pos:
-            p_len = ChunkDataset.update_process_count(str(os.getpid()),
-                                                      self._accelerator.process_index)
-            self._prev_doc_len += len(self._label_chunk)
+    def _data_iterator(self):
+        current_count = 0
+        previous_count = 0
+        files = None
+        labels = None
+        current_folder = None
 
-            while idx >= self._pos:
-                c1, c2 = self.set_new_chunk_path()
-                curr_len = int(os.path.split(c1)[-1].split("-")[2])
-                self._pos += curr_len
+        while self.start_index < self.end_index:
+            while current_count <= self.start_index:
+                current_file = self.chunk_list.pop()
+                previous_count = current_count
+                current_count += int(os.path.split(current_file)[-1].split("-")[2])
 
-            if p_len == self._num_workers:
-                self.unzip_labels_and_files(c1, c2)
-                ChunkDataset.reset_process_list(self._accelerator.process_index)
-                self._event_dict[str(self._accelerator.process_index)].set()
-                self._event_dict[str(self._accelerator.process_index)].clear()
-            else:
-                self._event_dict[str(self._accelerator.process_index)].wait()
+                if current_count > self.start_index:
 
-            self._set_new_data()
+                    if self._cloud:
+                        files_labels_tuple, folder = self.unzip_cloud_data(current_file)
+                    else:
+                        files_labels_tuple, folder = self.unzip_local_data(current_file)
 
-        file_tup = self.get_files(idx - self._prev_doc_len)
-        if file_tup:
-            return self._label_chunk[idx - self._prev_doc_len], self.get_files(idx - self._prev_doc_len)
-        else:
-            return self._label_chunk[idx - self._prev_doc_len]
+                    files, labels = files_labels_tuple
+
+                    if current_folder:
+                        self.delete_dir(current_folder)
+
+                    current_folder = folder
+
+            index = self.start_index - previous_count
+            yield labels[index], IterableChunk.get_files(files[index]) if files else None
+            self.start_index += 1
+
+    def __iter__(self):
+        return iter(self._data_iterator())
+
+    @staticmethod
+    def worker_init_fn(worker_id):
+        worker_info = torch.utils.data.get_worker_info()
+        dataset = worker_info.dataset
+        overall_start = dataset.start_index
+        overall_end = dataset.end_index
+
+        per_worker = int(math.ceil((overall_end - overall_start) / float(worker_info.num_workers)))
+
+        dataset.start_index = overall_start + worker_id * per_worker
+        dataset.end_index = min(dataset.start_index + per_worker, overall_end)
