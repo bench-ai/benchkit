@@ -1,9 +1,10 @@
 import copy
+import os.path
+from pathlib import Path
 
 from accelerate import Accelerator
 
-
-# check out dispatch_batches
+from BenchKit.Data.Helpers import remove_all_temps
 
 def get_accelerator(split_batches=False,
                     even_batches: bool = True,
@@ -14,7 +15,6 @@ def get_accelerator(split_batches=False,
                     cpu: bool | None = None,
                     rng_types: list[str] | None = None,
                     kwargs_handlers: list | None = None) -> Accelerator:
-
     kwargs = {'split_batches': split_batches,
               'even_batches': even_batches,
               'step_scheduler_with_optimizer': step_scheduler_with_optimizer,
@@ -31,3 +31,23 @@ def get_accelerator(split_batches=False,
             kwargs.pop(k)
 
     return Accelerator(**kwargs)
+
+
+def wipe_temp(acc: Accelerator):
+    acc.wait_for_everyone()
+    remove_all_temps()
+    acc.wait_for_everyone()
+
+
+def write_script():
+    template_path = Path(__file__).resolve().parent / "TrainScript.txt"
+
+    if not os.path.isfile(str(template_path)):
+        with open(template_path, "r") as read_file:
+
+            with open(".TrainScript.py", "w") as file:
+                line = read_file.readline()
+                while line:
+                    file.write(line)
+                    line = read_file.readline()
+

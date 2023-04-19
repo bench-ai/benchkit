@@ -57,16 +57,6 @@ class IterableChunk(IterableDataset):
         self.start_index = 0
         self.end_index = length
 
-        self._process_id = f"Temp-{str(uuid.uuid4())}"
-
-    def reset_root_dir(self) -> str:
-        root_dir = os.path.join(".", self._process_id)
-
-        if os.path.isdir(root_dir):
-            shutil.rmtree(root_dir)
-
-        return root_dir
-
     @staticmethod
     def delete_dir(uid: str):
         root_dir = os.path.join(".", uid)
