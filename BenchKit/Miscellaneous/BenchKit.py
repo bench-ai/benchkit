@@ -120,6 +120,7 @@ def main():
 
     parser.add_argument("-ss",
                         "--setsettings",
+                        action='store_true',
                         required=False)
 
     args = parser.parse_args()
