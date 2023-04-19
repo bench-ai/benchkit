@@ -42,7 +42,7 @@ def wipe_temp(acc: Accelerator):
 def write_script():
     template_path = Path(__file__).resolve().parent / "TrainScript.txt"
 
-    if not os.path.isfile(str(template_path)):
+    if not os.path.isfile("TrainScript.py"):
         with open(template_path, "r") as read_file:
 
             with open("TrainScript.py", "w") as file:
