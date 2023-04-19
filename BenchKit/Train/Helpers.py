@@ -45,7 +45,7 @@ def write_script():
     if not os.path.isfile(str(template_path)):
         with open(template_path, "r") as read_file:
 
-            with open(".TrainScript.py", "w") as file:
+            with open("TrainScript.py", "w") as file:
                 line = read_file.readline()
                 while line:
                     file.write(line)
