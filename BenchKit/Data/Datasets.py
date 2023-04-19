@@ -1,15 +1,11 @@
-import io
-import json
+import math
 import os
-import zipfile
-
+import uuid
 import requests
 import torch
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, IterableDataset
 from typing import Any, final
 import shutil
-import multiprocessing
-
 from BenchKit.Miscellaneous.Settings import get_config
 from BenchKit.Miscellaneous.User import get_dataset, get_get_url
 
@@ -30,11 +26,14 @@ class ProcessorDataset(Dataset):
         return (cur_num, cur_file) if cur_file else (cur_num,)
 
 
-class ChunkDataset(Dataset):
+class IterableChunk(IterableDataset):
 
     def __init__(self,
                  name: str,
-                 cloud: bool):
+                 cloud: bool,
+                 length: int):
+
+        self._cloud = cloud
 
         cfg = get_config()
 
@@ -44,100 +43,143 @@ class ChunkDataset(Dataset):
                 dataset_len = i["length"]
                 dataset_id = i["info"]["id"]
 
-        self._label_chunk: list = []
-        self._file_chunk = None
-        self._chunk_path = None
+        if not cloud:
+            self.chunk_list = [os.path.join(chunk_path, chunk) for chunk in os.listdir(chunk_path)]
+        else:
+            self.chunk_list = get_dataset(dataset_id)
 
-        self._cloud = cloud
         self._dataset_id = dataset_id
 
-        if not cloud:
-            self._chunk_list = [os.path.join(chunk_path, chunk) for chunk in os.listdir(chunk_path)]
-        else:
-            self._chunk_list = get_dataset(dataset_id)
+        self.chunk_list = sorted(self.chunk_list, key=lambda x: int(os.path.split(x)[-1].split("-")[1]))
 
-        self._dataset_length = dataset_len
+        self.length = dataset_len
 
-        self._pos = len(self._label_chunk)
-        self._prev_doc_len = 0
+        self.start_index = 0
+        self.end_index = length
 
-    def get_current_labels_and_files(self):
+    @staticmethod
+    def delete_dir(uid: str):
+        root_dir = os.path.join(".", uid)
 
-        process = multiprocessing.current_process().name
+        if os.path.isdir(root_dir):
+            shutil.rmtree(root_dir)
 
-        root_dir = os.path.join(".", f"TempData-{process}")
+    @staticmethod
+    def _set_new_data(folder_path):
+        folder_list = os.listdir(folder_path)
+
+        file_chunk = None
+        label_chunk = None
+        for i in folder_list:
+            path = os.path.join(folder_path, i)
+            if os.path.isdir(path):
+                file_chunk = sorted(os.listdir(path),
+                                    key=lambda x: int(x.split("-")[-1]))
+
+                file_chunk = [os.path.join(path, x) for x in file_chunk]
+            else:
+                label_chunk = torch.load(path)
+
+        return file_chunk, label_chunk
+
+    def unzip_local_data(self, current_file: str):
+
+        f_id = f"Temp-{str(uuid.uuid4())}"
+        root_dir = os.path.join(".", f_id)
 
         if os.path.isdir(root_dir):
             shutil.rmtree(root_dir)
 
         os.mkdir(root_dir)
+        chunk_path = os.path.join(root_dir,
+                                  os.path.split(current_file)[-1])
 
-        current_chunk = self._chunk_list.pop(0)
+        shutil.unpack_archive(current_file, chunk_path)
 
-        if not self._cloud:
-            self._chunk_path = os.path.join(root_dir,
-                                            os.path.split(current_chunk)[-1])
+        return IterableChunk._set_new_data(chunk_path), f_id
 
-            try:
-                shutil.unpack_archive(current_chunk, self._chunk_path)
-            except FileExistsError:
-                pass
-        else:
+    def unzip_cloud_data(self, current_file: str):
+        f_id = f"Temp-{str(uuid.uuid4())}"
+        root_dir = os.path.join(".", f_id)
 
-            file_data = get_get_url(dataset_id=self._dataset_id,
-                                               file_path=current_chunk)
+        if os.path.isdir(root_dir):
+            shutil.rmtree(root_dir)
 
-            mem_zip = requests.get(file_data)
+        file_data = get_get_url(dataset_id=self._dataset_id,
+                                file_path=current_file)
 
-            zip_dir = os.path.join(".", f"TempData-zip-{process}")
-            if os.path.isdir(zip_dir):
-                shutil.rmtree(zip_dir)
+        mem_zip = requests.get(file_data)
 
-            os.mkdir(zip_dir)
-            zip_path = os.path.join(zip_dir, os.path.split(current_chunk)[-1])
+        zip_dir = os.path.join(".", f"Temp-zip-{f_id}")
+        if os.path.isdir(zip_dir):
+            shutil.rmtree(zip_dir)
 
-            with open(zip_path, 'wb') as f:
-                f.write(mem_zip.content)
+        os.mkdir(zip_dir)
+        zip_path = os.path.join(zip_dir, os.path.split(current_file)[-1])
 
-            self._chunk_path = os.path.join(root_dir,
-                                            os.path.split(current_chunk)[-1])
+        with open(zip_path, 'wb') as f:
+            f.write(mem_zip.content)
 
-            try:
-                shutil.unpack_archive(zip_path, self._chunk_path)
-            except FileExistsError:
-                pass
+        chunk_path = os.path.join(root_dir,
+                                  os.path.split(current_file)[-1])
 
-        folder_list = os.listdir(self._chunk_path)
+        try:
+            shutil.unpack_archive(zip_path, chunk_path)
+        except FileExistsError:
+            pass
 
-        for i in folder_list:
-            path = os.path.join(self._chunk_path, i)
-            if os.path.isdir(path):
-                self._file_chunk = sorted(os.listdir(path),
-                                          key=lambda x: int(x.split("-")[-1]))
+        return IterableChunk._set_new_data(chunk_path), f_id
 
-                self._file_chunk = [os.path.join(path, x) for x in self._file_chunk]
-            else:
-                self._label_chunk = torch.load(path)
+    @staticmethod
+    def get_files(file_folder: str | None) -> list[str] | None:
 
-    def __len__(self):
-        return self._dataset_length
-
-    def get_files(self,
-                  idx: int) -> list[str] | None:
-
-        if self._file_chunk:
-            return [os.path.join(self._file_chunk[idx], i) for i in os.listdir(self._file_chunk[idx])]
+        if file_folder:
+            return [os.path.join(file_folder, i) for i in os.listdir(file_folder)]
         else:
             return None
 
-    def __getitem__(self, idx):
-        if idx >= self._pos:
-            self._prev_doc_len += len(self._label_chunk)
-            self.get_current_labels_and_files()
-            self._pos += len(self._label_chunk)
+    def _data_iterator(self):
+        current_count = 0
+        previous_count = 0
+        files = None
+        labels = None
+        current_folder = None
 
-        file_tup = self.get_files(idx - self._prev_doc_len)
-        if file_tup:
-            return self._label_chunk[idx - self._prev_doc_len], self.get_files(idx - self._prev_doc_len)
-        else:
-            return self._label_chunk[idx - self._prev_doc_len]
+        while self.start_index < self.end_index:
+            while current_count <= self.start_index:
+                current_file = self.chunk_list.pop()
+                previous_count = current_count
+                current_count += int(os.path.split(current_file)[-1].split("-")[2])
+
+                if current_count > self.start_index:
+
+                    if self._cloud:
+                        files_labels_tuple, folder = self.unzip_cloud_data(current_file)
+                    else:
+                        files_labels_tuple, folder = self.unzip_local_data(current_file)
+
+                    files, labels = files_labels_tuple
+
+                    if current_folder:
+                        self.delete_dir(current_folder)
+
+                    current_folder = folder
+
+            index = self.start_index - previous_count
+            yield labels[index], IterableChunk.get_files(files[index]) if files else None
+            self.start_index += 1
+
+    def __iter__(self):
+        return iter(self._data_iterator())
+
+    @staticmethod
+    def worker_init_fn(worker_id):
+        worker_info = torch.utils.data.get_worker_info()
+        dataset = worker_info.dataset
+        overall_start = dataset.start_index
+        overall_end = dataset.end_index
+
+        per_worker = int(math.ceil((overall_end - overall_start) / float(worker_info.num_workers)))
+
+        dataset.start_index = overall_start + worker_id * per_worker
+        dataset.end_index = min(dataset.start_index + per_worker, overall_end)

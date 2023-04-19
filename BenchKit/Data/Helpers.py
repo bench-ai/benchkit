@@ -22,7 +22,43 @@ class UploadError(Exception):
     pass
 
 
-# Test this in benchkit migrate to bench kit
+def get_dataset(chunk_class,
+                dataset_name: str,
+                batch_size: int,
+                num_workers: int,
+                *args,
+                **kwargs):
+
+    from BenchKit.Miscellaneous.Settings import get_config
+
+    cfg = get_config()
+    ds = None
+
+    for i in cfg["datasets"]:
+        if i["name"] == dataset_name:
+            skip = True
+            ds = i
+            break
+
+    dl = DataLoader(dataset=chunk_class(dataset_name,
+                                        True,
+                                        ds["length"],
+                                        *args,
+                                        **kwargs),
+                    num_workers=num_workers,
+                    batch_size=batch_size,
+                    worker_init_fn=chunk_class.worker_init_fn)
+
+    return dl
+
+
+def remove_all_temps():
+
+    for i in os.listdir("."):
+        if i.startswith("Temp"):
+            shutil.rmtree(os.path.join(".", i))
+
+
 
 def upload_file(url,
                 file_path,
@@ -43,9 +79,12 @@ def process_datasets(processed_dataset: ProcessorDataset,
                      dataset_name: str,
                      *args,
                      **kwargs):
+
     from BenchKit.Miscellaneous.BenchKit import set_settings, write_config
     from BenchKit.Miscellaneous.Settings import get_config, set_config
     set_settings()
+
+    num_workers = 2
 
     skip = False
     cfg = get_config()
@@ -61,6 +100,7 @@ def process_datasets(processed_dataset: ProcessorDataset,
 
         dataset_dict = create_dataset(dataset_name,
                                       cfg["project"]["id"])
+
 
         print(Fore.RED + "Started Data processing" + Style.RESET_ALL)
         is_2 = False
@@ -84,18 +124,27 @@ def process_datasets(processed_dataset: ProcessorDataset,
         write_config()
         print(Fore.GREEN + "Data is processed" + Style.RESET_ALL)
 
-    dl = DataLoader(dataset=chunk_dataset(dataset_name, False, *args, **kwargs),
-                    num_workers=4,
-                    batch_size=16)
+    length = ds["length"] if ds else ds_list[-1]["length"]
+
+    dl = DataLoader(dataset=chunk_dataset(dataset_name,
+                                          False,
+                                          length,
+                                          *args,
+                                          **kwargs),
+                    num_workers=num_workers,
+                    batch_size=16,
+                    worker_init_fn=chunk_dataset.worker_init_fn)
 
     if ds:
         if not ds.get("test"):
             print(Fore.RED + "Running Data Loading test" + Style.RESET_ALL)
-            for _ in tqdm(dl, colour="blue"):
+            for _ in tqdm(dl, colour="blue", total=int(np.ceil(length / 16)) + 1):
                 pass
     else:
-        for _ in tqdm(dl, colour="blue"):
+        for _ in tqdm(dl, colour="blue", total=int(np.ceil(length / 16)) + 1):
             pass
+
+    remove_all_temps()
 
     for idx, i in enumerate(cfg["datasets"]):
         if i["name"] == dataset_name:
@@ -136,19 +185,21 @@ def process_datasets(processed_dataset: ProcessorDataset,
 
     print(Fore.GREEN + "Finished Upload" + Style.RESET_ALL)
 
-    dl = DataLoader(dataset=chunk_dataset(dataset_name, True, *args, **kwargs),
-                    num_workers=4,
-                    batch_size=32)
+    dl = DataLoader(dataset=chunk_dataset(dataset_name,
+                                          True,
+                                          length,
+                                          *args,
+                                          **kwargs),
+                    num_workers=num_workers,
+                    batch_size=32,
+                    worker_init_fn=chunk_dataset.worker_init_fn)
 
     print(Fore.RED + "Cloud Online Epoch Test" + Style.RESET_ALL)
-    size = 0
-    for batch in tqdm(dl, colour="blue"):
+    for batch in tqdm(dl, colour="blue", total=int(np.ceil(length / 32)) + 1):
         labels, _ = batch
-        size += labels.size()[0]
 
-    for i in os.listdir("."):
-        if i.startswith("TempData"):
-            shutil.rmtree(i)
+    remove_all_temps()
+
     print(Fore.GREEN + "Passed Online Epoch Test" + Style.RESET_ALL)
 
 
@@ -168,10 +219,11 @@ def copy_file(folder_path: str,
 def save_folder_data(save_folder: str,
                      chunk_num: int,
                      label_batch: list,
-                     file_batch: list):
+                     file_batch: list,
+                     data_length: int):
     file_str = "dataset-labels-{}.pt"
     folder_str = "dataset-chunk-{}"
-    zip_str = f"dataset-{chunk_num}-zip"
+    zip_str = f"dataset-{chunk_num}-{data_length}-zip"
     file_folder = "dataset-files-folder-{}"
 
     folder_path = os.path.join(save_folder, folder_str.format(chunk_num))
@@ -239,7 +291,8 @@ def save_file_and_label(dataset: ProcessorDataset,
             save_folder_data(save_folder,
                              chunk_num,
                              label_batch,
-                             file_batch)
+                             file_batch,
+                             len(file_batch))
 
             file_batch = []
             label_batch = []
@@ -252,14 +305,16 @@ def save_file_and_label(dataset: ProcessorDataset,
     save_folder_data(save_folder,
                      chunk_num,
                      label_batch,
-                     file_batch)
+                     file_batch,
+                     len(file_batch))
     ds_list[-1]["length"] = count
     return ds_list
 
 
 def save_label_data(dataset: ProcessorDataset,
                     ds_name: str):
-    from BenchKit.Miscellaneous.Settings import get_config, set_config
+    # needs to be seriously fixed
+    from BenchKit.Miscellaneous.Settings import get_config
     cwd = os.getcwd()
     save_folder = os.path.join(cwd, "ProjectDatasets", ds_name)
     config = get_config()
@@ -286,7 +341,7 @@ def save_label_data(dataset: ProcessorDataset,
     chunk_num = 0
     folder_name = "dataset-chunk-{}"
     file_str = "dataset-labels-{}.pt"
-    zip_str = "dataset-{}-zip"
+    zip_str = "dataset-{}-{}-zip"
 
     folder_path = os.path.join(save_folder, folder_name.format(chunk_num))
 
@@ -311,7 +366,7 @@ def save_label_data(dataset: ProcessorDataset,
 
     torch.save(arr, os.path.join(folder_path, file_str.format(chunk_num)))
 
-    shutil.make_archive(os.path.join(save_folder, zip_str),
+    shutil.make_archive(os.path.join(save_folder, zip_str.format(chunk_num, len(arr))),
                         "zip",
                         folder_path)
 
@@ -387,6 +442,9 @@ def merge_folders(small_folder: str, large_folder: str, save_folder: str):
     head, tail = os.path.split(large_folder)
 
     f_name = tail.split(".")[0]
+
+    f_list = f_name.split("-")
+    f_name = f"dataset-{f_list[1]}-{len(large_tensor)}-zip"
     shutil.make_archive(f"{head}/{f_name}",
                         "zip",
                         large_path)
@@ -457,6 +515,7 @@ def create_dataset_dir():
         with open(whole_path, "w") as file:
             file.write("from BenchKit.Data.Datasets import ProcessorDataset, ChunkDataset\n")
             file.write("from BenchKit.Data.Helpers import process_datasets\n")
+            file.write("from accelerate import accelerator\n")
             file.write("# Write your datasets or datapipes here")
             file.write("\n")
             file.write("\n")

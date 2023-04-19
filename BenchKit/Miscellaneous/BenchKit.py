@@ -1,5 +1,7 @@
 import json
 from pathlib import Path
+from BenchKit.NeuralNetworks.Helpers import create_model_dir
+from BenchKit.Train.Helpers import write_script
 from .Settings import set_config
 from .Verbose import verbose_logo
 import argparse
@@ -133,6 +135,8 @@ def main():
         write_manager()
         start_dataset()
         set_project(x)
+        create_model_dir()
+        write_script()
 
 
 if __name__ == '__main__':
