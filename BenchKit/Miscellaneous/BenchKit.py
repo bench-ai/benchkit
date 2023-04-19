@@ -118,6 +118,10 @@ def main():
                         "--startproject",
                         required=False)
 
+    parser.add_argument("-ss",
+                        "--setsettings",
+                        required=False)
+
     args = parser.parse_args()
 
     if args.version:
@@ -128,6 +132,9 @@ def main():
 
     if args.dataset:
         start_dataset()
+
+    if args.setsettings:
+        set_settings()
 
     x = args.startproject
     if x:

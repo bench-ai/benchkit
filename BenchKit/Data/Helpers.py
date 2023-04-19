@@ -513,9 +513,8 @@ def create_dataset_dir():
             pass
 
         with open(whole_path, "w") as file:
-            file.write("from BenchKit.Data.Datasets import ProcessorDataset, ChunkDataset\n")
+            file.write("from BenchKit.Data.Datasets import ProcessorDataset, IterableChunk\n")
             file.write("from BenchKit.Data.Helpers import process_datasets\n")
-            file.write("from accelerate import accelerator\n")
             file.write("# Write your datasets or datapipes here")
             file.write("\n")
             file.write("\n")
