@@ -28,7 +28,6 @@ def get_dataset(chunk_class,
                 num_workers: int,
                 *args,
                 **kwargs):
-
     from BenchKit.Miscellaneous.Settings import get_config
 
     cfg = get_config()
@@ -53,11 +52,9 @@ def get_dataset(chunk_class,
 
 
 def remove_all_temps():
-
     for i in os.listdir("."):
         if i.startswith("Temp"):
             shutil.rmtree(os.path.join(".", i))
-
 
 
 def upload_file(url,
@@ -79,7 +76,6 @@ def process_datasets(processed_dataset: ProcessorDataset,
                      dataset_name: str,
                      *args,
                      **kwargs):
-
     from BenchKit.Miscellaneous.BenchKit import set_settings, write_config
     from BenchKit.Miscellaneous.Settings import get_config, set_config
     set_settings()
@@ -100,7 +96,6 @@ def process_datasets(processed_dataset: ProcessorDataset,
 
         dataset_dict = create_dataset(dataset_name,
                                       cfg["project"]["id"])
-
 
         print(Fore.RED + "Started Data processing" + Style.RESET_ALL)
         is_2 = False

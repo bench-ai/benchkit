@@ -192,6 +192,27 @@ def project_image_upload_url(tar_size: int,
     return json.loads(response.content)
 
 
+def get_versions():
+    request_url = os.path.join("http://localhost:8000", "api", "project", "image")
+
+    project_name = get_config()["project"]["name"]
+
+    response = request_executor("get",
+                                url=request_url,
+                                params={"project_name": project_name})
+
+    return json.loads(response.content)
+
+
+def delete_all_images():
+    request_url = os.path.join("http://localhost:8000", "api", "project", "delete", "all", "images")
+
+    project_name = get_config()["project"]["name"]
+
+    request_executor("delete",
+                     url=request_url,
+                     json={"project_name": project_name})
+
 
 @authorize_response
 def request_executor(req_type: str, **kwargs):

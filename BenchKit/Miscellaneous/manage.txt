@@ -2,7 +2,7 @@ import argparse
 from BenchKit.Miscellaneous.Settings import get_config, set_config
 from BenchKit.Miscellaneous.BenchKit import write_config_template, set_project, set_settings
 from Datasets.ProjectDatasets import main
-from BenchKit.Miscellaneous.User import delete_dataset
+from BenchKit.Miscellaneous.User import delete_dataset, get_versions, delete_all_images
 from BenchKit.Miscellaneous.Dockerize import build_docker_image, save_image_tarball, upload_tarball
 import shutil
 from colorama import Fore, Style
@@ -69,6 +69,8 @@ def cli():
         set_config({"user_credentials": user_creds})
         set_project(project_name)
 
+        delete_all_images()
+
     if args.makemigration:
         create_datasets()
 
@@ -90,9 +92,8 @@ def cli():
         print(Fore.GREEN + "Completed Tarball creation" + Style.RESET_ALL)
 
         print(Fore.RED + "Starting Image Upload " + Style.RESET_ALL)
-
-        upload_tarball()
-
+        upload_tarball(version=arg_dict["version"])
+        print(Fore.GREEN + "Completed Image Upload" + Style.RESET_ALL)
 
 if __name__ == '__main__':
     cli()
