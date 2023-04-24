@@ -3,7 +3,7 @@ import os
 import pathlib
 from functools import wraps
 import requests
-from .Settings import get_main_url, get_credentials
+from .Settings import get_main_url, get_credentials, get_config
 
 
 def authorize_response(func):
@@ -21,6 +21,8 @@ def authorize_response(func):
         method = [AuthenticatedUser.refresh, AuthenticatedUser.login]
 
         if response.status_code != 200:
+
+            # print(json.loads(response.content))
 
             for i in method:
 
@@ -159,6 +161,36 @@ def get_get_url(dataset_id: str,
                                         "file_key": file_path})
 
     return json.loads(response.content)
+
+
+def get_gpu_count():
+    request_url = os.path.join("http://localhost:8000", "api", "pricing", "plan", "train", "gpu-count")
+
+    project_name = get_config()["project"]["name"]
+
+    response = request_executor("get",
+                                url=request_url,
+                                params={"project_name": project_name})
+
+    return json.loads(response.content)
+
+
+def project_image_upload_url(tar_size: int,
+                             version: int,
+                             tar_name: int):
+    request_url = os.path.join("http://localhost:8000", "api", "project", "image")
+
+    project_name = get_config()["project"]["name"]
+
+    response = request_executor("post",
+                                url=request_url,
+                                json={"project_name": project_name,
+                                      "tarball_size": tar_size,
+                                      "version": version,
+                                      "tar_name": tar_name})
+
+    return json.loads(response.content)
+
 
 
 @authorize_response

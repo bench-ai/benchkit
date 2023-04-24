@@ -3,7 +3,10 @@ from BenchKit.Miscellaneous.Settings import get_config, set_config
 from BenchKit.Miscellaneous.BenchKit import write_config_template, set_project, set_settings
 from Datasets.ProjectDatasets import main
 from BenchKit.Miscellaneous.User import delete_dataset
+from BenchKit.Miscellaneous.Dockerize import build_docker_image, save_image_tarball, upload_tarball
 import shutil
+from colorama import Fore, Style
+
 
 
 def create_datasets():
@@ -26,6 +29,30 @@ def cli():
                         "--clear",
                         action="store_true")
 
+    parser.add_argument("migratecode",
+                        nargs='?',
+                        choices=["migratecode"])
+
+    parser.add_argument("--fp",
+                        type=str,
+                        help="Path to Dockerfile",
+                        required=False)
+
+    parser.add_argument("--im",
+                        type=str,
+                        help="name of the image you wish to use",
+                        required=False)
+
+    parser.add_argument("--dv",
+                        type=int,
+                        help="the version of the image you wish to use",
+                        required=False)
+
+    parser.add_argument("--t",
+                        type=str,
+                        help="the tag to be used on this image",
+                        required=False)
+
     args = parser.parse_args()
 
     if args.clear:
@@ -44,6 +71,27 @@ def cli():
 
     if args.makemigration:
         create_datasets()
+
+    if args.migratecode:
+
+        arg_dict = {
+            "docker_image_path": args.fp,
+            "image_name": args.im,
+            "version": args.dv,
+            "tag": args.t,
+        }
+
+        print(Fore.RED + "Building Image" + Style.RESET_ALL)
+        build_docker_image(**arg_dict)
+        print(Fore.GREEN + "built image" + Style.RESET_ALL)
+
+        print(Fore.RED + "Creating Tarball" + Style.RESET_ALL)
+        save_image_tarball()
+        print(Fore.GREEN + "Completed Tarball creation" + Style.RESET_ALL)
+
+        print(Fore.RED + "Starting Image Upload " + Style.RESET_ALL)
+
+        upload_tarball()
 
 
 if __name__ == '__main__':
