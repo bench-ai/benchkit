@@ -157,7 +157,7 @@ class IterableChunk(IterableDataset):
 
         while self.start_index < self.end_index:
             while current_count <= self.start_index:
-                current_file = self.chunk_list.pop()
+                current_file = self.chunk_list.pop(0)
                 previous_count = current_count
                 current_count += int(os.path.split(current_file)[-1].split("-")[2])
 
