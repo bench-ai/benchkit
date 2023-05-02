@@ -30,21 +30,27 @@ class IterableChunk(IterableDataset):
 
     def __init__(self,
                  name: str,
-                 cloud: bool,
-                 length: int):
+                 cloud: bool):
 
         self._cloud = cloud
 
         cfg = get_config()
 
+        entered = False
+
         for i in cfg.get("datasets"):
+
             if i["name"] == name:
-                chunk_path = i["path"]
-                dataset_len = i["length"]
-                dataset_id = i["info"]["id"]
+                entered = True
+                length = i["sample_count"]
+                dataset_id = i["id"]
+
+        if not entered:
+            raise RuntimeError("Dataset Does not appear to exist")
 
         if not cloud:
-            self.chunk_list = [os.path.join(chunk_path, chunk) for chunk in os.listdir(chunk_path)]
+            data_path = f"ProjectDatasets/{name}"
+            self.chunk_list = [os.path.join(data_path, chunk) for chunk in os.listdir(data_path)]
         else:
             self.chunk_list = get_dataset(dataset_id)
 
@@ -52,7 +58,7 @@ class IterableChunk(IterableDataset):
 
         self.chunk_list = sorted(self.chunk_list, key=lambda x: int(os.path.split(x)[-1].split("-")[1]))
 
-        self.length = dataset_len
+        self.length = length
 
         self.start_index = 0
         self.end_index = length

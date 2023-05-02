@@ -2,7 +2,7 @@ import docker
 import subprocess
 from BenchKit.Data.Helpers import upload_file
 from BenchKit.Miscellaneous.Settings import get_config, set_config
-from BenchKit.Miscellaneous.BenchKit import write_config
+from BenchKit.Miscellaneous.BenchKit import write_config, update_code_version_config
 import os
 from pathlib import Path
 from tqdm import tqdm
@@ -54,17 +54,10 @@ def build_docker_image(docker_image_path: str | None = None,
                         tag=docker_image_name,
                         path=".")
 
-    set_config({
-        "docker_details": {
-            "tarball_name": file_name + ".tar.gz",
-            "image_name": docker_image_name
-        }
-    })
-
     os.remove("Dockerfile")
     os.remove("entrypoint.sh")
 
-    write_config()
+    return file_name + ".tar.gz", docker_image_name
 
 
 def write_entrypoint_shell():
@@ -93,34 +86,25 @@ def write_entrypoint_shell():
         file.write(accelerate_string + "\n")
 
 
-def save_image_tarball():
-    docker_config = get_config()["docker_details"]
-
-    image_name = docker_config["image_name"]
-
-    docker_path = docker_config['tarball_name']
-
-    subprocess.run(f"docker save {image_name} | gzip > {docker_path}", shell=True)
-
-    return docker_path
+def save_image_tarball(tarball_name: str, image_name: str):
+    subprocess.run(f"docker save {image_name} | gzip > {tarball_name}", shell=True)
 
 
-def upload_tarball(version: int | None = None):
+def upload_tarball(tarball_name: str,
+                   version: int | None = None):
     if not version:
         version = 1
 
-    docker_config = get_config()["docker_details"]
-    tar_ball_name = docker_config["tarball_name"]
-
-    size = os.path.getsize(tar_ball_name)
+    size = os.path.getsize(tarball_name)
 
     url_data = project_image_upload_url(size,
                                         version,
-                                        tar_ball_name)
+                                        tarball_name)
 
     upload_file(url_data["url"],
-                tar_ball_name,
-                tar_ball_name,
+                tarball_name,
+                tarball_name,
                 url_data["fields"])
 
-    os.remove(tar_ball_name)
+    update_code_version_config()
+    os.remove(tarball_name)

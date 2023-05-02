@@ -3,9 +3,6 @@ import os.path
 from pathlib import Path
 
 from accelerate import Accelerator
-
-from BenchKit.Data.Helpers import remove_all_temps
-
 def get_accelerator(split_batches=False,
                     even_batches: bool = True,
                     step_scheduler_with_optimizer: bool = True,
@@ -34,6 +31,7 @@ def get_accelerator(split_batches=False,
 
 
 def wipe_temp(acc: Accelerator):
+    from BenchKit.Data.Helpers import remove_all_temps
     acc.wait_for_everyone()
     remove_all_temps()
     acc.wait_for_everyone()

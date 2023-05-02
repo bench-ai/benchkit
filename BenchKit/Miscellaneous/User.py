@@ -3,7 +3,7 @@ import os
 import pathlib
 from functools import wraps
 import requests
-from .Settings import get_main_url, get_credentials, get_config
+from .Settings import get_main_url, get_credentials, get_config, convert_iso_time
 
 
 def authorize_response(func):
@@ -60,7 +60,7 @@ def get_current_user() -> dict:
 
 def create_dataset(dataset_name: str,
                    project_id: str):
-    request_url = os.path.join(get_main_url(), "api", "dataset", "user", "list")
+    request_url = os.path.join("http://localhost:8000", "api", "dataset", "user", "list")
 
     try:
         response = request_executor("post",
@@ -79,6 +79,7 @@ def create_dataset(dataset_name: str,
                                     url=request_url,
                                     params={"page": 1,
                                             "name": dataset_name,
+                                            "project": project_id,
                                             "raw": True})
 
         if response.status_code == 200:
@@ -89,6 +90,46 @@ def create_dataset(dataset_name: str,
         return json.loads(response.content)
     else:
         raise RuntimeError("Unable to create Dataset")
+
+
+def get_dataset_list(project_id: str):
+    request_url = os.path.join("http://localhost:8000", "api", "dataset", "user", "list")
+    next_page = 1
+    dataset_list = []
+
+    while next_page:
+        response = request_executor("get",
+                                    url=request_url,
+                                    params={"page": 1,
+                                            "project": project_id,
+                                            "raw": True})
+
+        if response.status_code != 200:
+            raise RuntimeError("Cannot get datasets")
+        else:
+
+            response = json.loads(response.content)
+            next_page = response["next_page"]
+            dataset_list.extend(response["datasets"])
+
+    dataset_list.sort(key=lambda x: convert_iso_time(x["update_timestamp"]))
+
+    return dataset_list
+
+
+def patch_dataset_list(dataset_id: str,
+                       length: int):
+    request_url = os.path.join("http://localhost:8000", "api", "dataset", "user", "list")
+
+    response = request_executor("patch",
+                                url=request_url,
+                                json={
+                                    "id": dataset_id,
+                                    "sample_count": length
+                                })
+
+    if response.status_code != 200:
+        raise RuntimeError("Project does not exists please register it on bench")
 
 
 def get_user_project(project_name: str) -> dict:
@@ -120,7 +161,7 @@ def get_post_url(dataset_id: str,
 
 
 def delete_dataset(dataset_id: str):
-    request_url = os.path.join(get_main_url(), "api", "dataset", "upload")
+    request_url = os.path.join("http://localhost:8000", "api", "dataset", "upload")
 
     response = request_executor("delete",
                                 url=request_url,

@@ -1,37 +1,51 @@
 import argparse
+import os
+
+from BenchKit.Data.Helpers import update_dataset_config, create_dataset_zips, test_dataloading, run_upload
 from BenchKit.Miscellaneous.Settings import get_config, set_config
-from BenchKit.Miscellaneous.BenchKit import write_config_template, set_project, set_settings
+from BenchKit.Miscellaneous.BenchKit import set_project, load_project
 from Datasets.ProjectDatasets import main
-from BenchKit.Miscellaneous.User import delete_dataset, get_versions, delete_all_images
+from BenchKit.Miscellaneous.User import delete_dataset, delete_all_images
 from BenchKit.Miscellaneous.Dockerize import build_docker_image, save_image_tarball, upload_tarball
 import shutil
 from colorama import Fore, Style
 
 
-
 def create_datasets():
-    main()
+    return main()
 
 
 def clear():
-    shutil.rmtree("./ProjectDatasets")
+    if os.path.isdir("./ProjectDatasets"):
+        shutil.rmtree("./ProjectDatasets")
+
+
+def reset_dataset():
+    config = get_config()
+    datasets = config["datasets"]
+    for i in datasets:
+        d_id = i["info"]["id"]
+        delete_dataset(d_id)
+
+    clear()
+    update_dataset_config()
+
+
+def reset_docker_code():
+    delete_all_images()
 
 
 def cli():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-mm",
-                        "--makemigration",
-                        action='store_true',
-                        required=False)
-
-    parser.add_argument("-c",
-                        "--clear",
-                        action="store_true")
-
-    parser.add_argument("migratecode",
+    parser.add_argument("action",
                         nargs='?',
-                        choices=["migratecode"])
+                        choices=["migratedata", "reset", "migratecode"])
+
+    parser.add_argument("input_value",
+                        nargs='?',
+                        type=int,
+                        default=None)
 
     parser.add_argument("--fp",
                         type=str,
@@ -53,47 +67,110 @@ def cli():
                         help="the tag to be used on this image",
                         required=False)
 
+    parser.add_argument("--rd",
+                        help="reset dataset",
+                        action="store_true",
+                        required=False)
+
+    parser.add_argument("--rc",
+                        help="reset docker_code",
+                        action="store_true",
+                        required=False)
+
+    parser.add_argument("--zip",
+                        help="create zip files",
+                        action="store_true",
+                        required=False)
+
+    parser.add_argument("--tdl",
+                        help="test data loader",
+                        action="store_true",
+                        required=False)
+
+    parser.add_argument("--up",
+                        help="upload dataset",
+                        action="store_true",
+                        required=False)
+
     args = parser.parse_args()
 
-    if args.clear:
-        project_name = get_config()["project"]["name"]
-        user_creds = get_config()["user_credentials"]
-        datasets = get_config()["datasets"]
-        for i in datasets:
-            d_id = i["info"]["id"]
-            delete_dataset(d_id)
+    if args.action == "reset":
 
-        clear()
-        write_config_template()
-        set_settings()
-        set_config({"user_credentials": user_creds})
-        set_project(project_name)
+        print(Fore.RED + "WARNING this could reset your entire project. "
+                         "Everything including: all datasets, project versions, graphs, and more, will be permanently "
+                         "erased!" + Style.RESET_ALL)
 
-        delete_all_images()
+        answer = input("Do you wish to Proceed([[y]/n)? ").lower()
 
-    if args.makemigration:
-        create_datasets()
+        option_list = [
+            (args.rd, reset_dataset),
+            (args.rc, reset_docker_code)
+        ]
 
-    if args.migratecode:
+        argument_list, function_list = zip(*option_list)
 
+        if answer.startswith("y"):
+
+            if argument_list == ([False] * len(option_list)):
+
+                for func in function_list:
+                    func()
+            else:
+                for argument, func in option_list:
+                    if argument:
+                        func()
+
+            project_name = get_config()["project"]["name"]
+            user_creds = get_config()["user_credentials"]
+            set_config({"user_credentials": user_creds})
+            load_project(project_name)
+
+    if args.action == "migratedata":
+
+        arg_list = main()
+
+        if args.input_value is not None:
+            arg_list = [arg_list[args.input_value]]
+
+        for input_args in arg_list:
+
+            p_ds, c_ds, name, arg_list, kwarg_dict = input_args
+
+            argument_list = [args.zip, args.tdl, args.up]
+
+            if argument_list == ([False] * len(argument_list)):
+                args.zip, args.tdl, args.up = True, True, True
+
+            if args.zip:
+                create_dataset_zips(p_ds, name)
+
+            if args.tdl:
+                test_dataloading(name, c_ds, *arg_list, **kwarg_dict)
+
+            if args.up:
+                run_upload(name)
+
+    if args.action == "migratecode":
         arg_dict = {
             "docker_image_path": args.fp,
             "image_name": args.im,
             "version": args.dv,
-            "tag": args.t,
+            "tag": args.t
         }
 
         print(Fore.RED + "Building Image" + Style.RESET_ALL)
-        build_docker_image(**arg_dict)
+        tarball, image = build_docker_image(**arg_dict)
         print(Fore.GREEN + "built image" + Style.RESET_ALL)
 
         print(Fore.RED + "Creating Tarball" + Style.RESET_ALL)
-        save_image_tarball()
+        save_image_tarball(tarball,
+                           image)
         print(Fore.GREEN + "Completed Tarball creation" + Style.RESET_ALL)
 
         print(Fore.RED + "Starting Image Upload " + Style.RESET_ALL)
-        upload_tarball(version=arg_dict["version"])
+        upload_tarball(tarball, version=arg_dict["version"])
         print(Fore.GREEN + "Completed Image Upload" + Style.RESET_ALL)
+
 
 if __name__ == '__main__':
     cli()

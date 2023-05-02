@@ -1,4 +1,5 @@
 import json
+from dateutil import parser
 from pathlib import Path
 
 settings_path = Path(__file__).resolve().parent / "Config.json"
@@ -29,3 +30,7 @@ def set_config(new_config: dict):
 
     with open(settings_path, "w") as file:
         json.dump(old_config, file)
+
+
+def convert_iso_time(iso_time_str: str):
+    return parser.parse(iso_time_str)

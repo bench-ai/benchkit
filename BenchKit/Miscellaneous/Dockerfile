@@ -29,7 +29,7 @@ COPY ./entrypoint.sh /Bench-Project/
 WORKDIR /Bench-Project
 
 RUN chmod +x entrypoint.sh
-CMD ["entrypoint.sh"]
+CMD ["/Bench-Project/entrypoint.sh"]
 
 
 

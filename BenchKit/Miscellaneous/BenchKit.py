@@ -2,13 +2,17 @@ import json
 from pathlib import Path
 from BenchKit.NeuralNetworks.Helpers import create_model_dir
 from BenchKit.Train.Helpers import write_script
-from .Settings import set_config
+from .Settings import set_config, get_config
 from .Verbose import verbose_logo
 import argparse
 import getpass
-from BenchKit.Data.Helpers import create_dataset_dir
-from .User import AuthenticatedUser, Credential, get_user_project
-import os
+from .User import AuthenticatedUser, Credential, get_user_project, get_dataset_list, get_versions
+
+
+def create_dataset():
+    from BenchKit.Data.Helpers import create_dataset_dir
+    create_dataset_dir()
+
 
 
 def set_settings():
@@ -74,7 +78,6 @@ def write_config():
 def write_manager():
     template_path = Path(__file__).resolve().parent / "manage.txt"
     with open(template_path, "r") as f:
-
         with open("manage.py", "w") as file:
             line = f.readline()
             while line:
@@ -88,38 +91,47 @@ def set_project(project_name: str):
     write_config()
 
 
-def start_dataset():
-    create_dataset_dir()
+def update_dataset_config():
+    config = get_config()
+    project_id = config["project"]["id"]
+
+    ds_list: list = get_dataset_list(project_id)
+
+    set_config({"datasets": ds_list})
+    write_config()
+
+
+def update_code_version_config():
+    version_list = get_versions()
+    set_config({"code_versions": version_list})
+    write_config()
 
 
 def print_version():
-    verbose_logo("V.0.0.1 ALPHA")
+    verbose_logo("V.0.0.24 ALPHA")
+
+
+def load_project(project_name: str):
+    write_config_template()
+    set_project(project_name)
+    update_dataset_config()
+    update_code_version_config()
 
 
 def main():
     parser = argparse.ArgumentParser()
 
+    parser.add_argument("action",
+                        choices=["startproject", "logout", "setsettings"],
+                        nargs="?",
+                        default=None)
+
+    parser.add_argument("input_value",
+                        nargs='?',
+                        default=None)
+
     parser.add_argument("-v",
                         "--version",
-                        action='store_true',
-                        required=False)
-
-    parser.add_argument("-out",
-                        "--logout",
-                        action='store_true',
-                        required=False)
-
-    parser.add_argument("-ds",
-                        "--dataset",
-                        action='store_true',
-                        required=False)
-
-    parser.add_argument("-sp",
-                        "--startproject",
-                        required=False)
-
-    parser.add_argument("-ss",
-                        "--setsettings",
                         action='store_true',
                         required=False)
 
@@ -128,21 +140,20 @@ def main():
     if args.version:
         print_version()
 
-    if args.logout:
+    if args.action == "logout":
         logout()
 
-    if args.dataset:
-        start_dataset()
-
-    if args.setsettings:
+    if args.action == "setsettings":
         set_settings()
 
-    x = args.startproject
-    if x:
-        write_config_template()
+    if args.action == "startproject":
+
+        if not args.input_value:
+            raise ValueError("Project Name not provided")
+
+        load_project(args.input_value)
         write_manager()
-        start_dataset()
-        set_project(x)
+        create_dataset()
         create_model_dir()
         write_script()
 
