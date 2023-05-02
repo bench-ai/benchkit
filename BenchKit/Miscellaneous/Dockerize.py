@@ -1,11 +1,10 @@
 import docker
 import subprocess
 from BenchKit.Data.Helpers import upload_file
-from BenchKit.Miscellaneous.Settings import get_config, set_config
-from BenchKit.Miscellaneous.BenchKit import write_config, update_code_version_config
+from BenchKit.Miscellaneous.Settings import get_config
+from BenchKit.Miscellaneous.BenchKit import update_code_version_config
 import os
 from pathlib import Path
-from tqdm import tqdm
 from BenchKit.Miscellaneous.User import get_gpu_count, project_image_upload_url
 
 client = docker.from_env()
@@ -63,20 +62,21 @@ def build_docker_image(docker_image_path: str | None = None,
 def write_entrypoint_shell():
     gpu_dict = get_gpu_count()
 
-    prefix_flags = ["--mixed_precision no"]
+    # test this out
+    prefix_flags = ["--dynamo_backend no",
+                    f"--num_processes {gpu_dict['gpu_count']}",
+                    "--num_machines 1",
+                    "--mixed_precision no"]
 
     if gpu_dict["multi"]:
         prefix_flags.append("--multi_gpu")
 
-    prefix_flags.append("--num_machines 1")
-    prefix_flags.append(f"--num_processes {gpu_dict['gpu_count']}")
-
-    accelerate_string = 'accelerate '
+    accelerate_string = 'accelerate launch '
 
     for i in prefix_flags:
         accelerate_string += f"{i} "
 
-    accelerate_string += "launch TrainScript.py"
+    accelerate_string += "TrainScript.py"
 
     with open("entrypoint.sh", "w") as file:
 
