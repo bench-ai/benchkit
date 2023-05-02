@@ -10,7 +10,8 @@ import shutil
 import pathlib
 from tqdm import tqdm
 from BenchKit.Data.Datasets import ProcessorDataset
-from BenchKit.Miscellaneous.User import create_dataset, get_post_url
+from BenchKit.Miscellaneous.BenchKit import update_dataset_config
+from BenchKit.Miscellaneous.User import create_dataset, get_post_url, patch_dataset_list, delete_dataset
 
 megabyte = 1_024 ** 2
 gigabyte = megabyte * 1024
@@ -23,26 +24,15 @@ class UploadError(Exception):
 
 
 def get_dataset(chunk_class,
+                cloud: bool,
                 dataset_name: str,
                 batch_size: int,
                 num_workers: int,
                 *args,
                 **kwargs):
 
-    from BenchKit.Miscellaneous.Settings import get_config
-
-    cfg = get_config()
-    ds = None
-
-    for i in cfg["datasets"]:
-        if i["name"] == dataset_name:
-            skip = True
-            ds = i
-            break
-
     dl = DataLoader(dataset=chunk_class(dataset_name,
-                                        True,
-                                        ds["length"],
+                                        cloud,
                                         *args,
                                         **kwargs),
                     num_workers=num_workers,
@@ -53,11 +43,9 @@ def get_dataset(chunk_class,
 
 
 def remove_all_temps():
-
     for i in os.listdir("."):
         if i.startswith("Temp"):
             shutil.rmtree(os.path.join(".", i))
-
 
 
 def upload_file(url,
@@ -74,98 +62,117 @@ def upload_file(url,
         raise RuntimeError(f"Failed to Upload {file_path}")
 
 
-def process_datasets(processed_dataset: ProcessorDataset,
-                     chunk_dataset,
-                     dataset_name: str,
-                     *args,
-                     **kwargs):
+def get_current_dataset(ds_name: str):
+    from BenchKit.Miscellaneous.Settings import get_config
+    update_dataset_config()
 
-    from BenchKit.Miscellaneous.BenchKit import set_settings, write_config
-    from BenchKit.Miscellaneous.Settings import get_config, set_config
-    set_settings()
-
-    num_workers = 2
-
-    skip = False
     cfg = get_config()
     ds = None
 
     for i in cfg["datasets"]:
-        if i["name"] == dataset_name:
-            skip = True
+        if i["name"] == ds_name:
             ds = i
             break
 
-    if not skip:
-
-        dataset_dict = create_dataset(dataset_name,
-                                      cfg["project"]["id"])
+    return cfg, ds
 
 
-        print(Fore.RED + "Started Data processing" + Style.RESET_ALL)
-        is_2 = False
-        for i in DataLoader(processed_dataset, batch_size=1):
-            if len(i) == 2:
-                is_2 = True
-            break
+def create_dataset_zips(processed_dataset: ProcessorDataset,
+                        dataset_name: str):
 
-        if is_2:
-            ds_list = save_file_and_label(processed_dataset, dataset_name)
-        else:
-            ds_list = save_label_data(processed_dataset, dataset_name)
-
-        affirm_size(ds_list[-1]["path"])
-
-        ds_list[-1]["info"] = dataset_dict
-
-        set_config({"datasets": ds_list})
-        cfg["datasets"] = ds_list
-
-        write_config()
-        print(Fore.GREEN + "Data is processed" + Style.RESET_ALL)
-
-    length = ds["length"] if ds else ds_list[-1]["length"]
-
-    dl = DataLoader(dataset=chunk_dataset(dataset_name,
-                                          False,
-                                          length,
-                                          *args,
-                                          **kwargs),
-                    num_workers=num_workers,
-                    batch_size=16,
-                    worker_init_fn=chunk_dataset.worker_init_fn)
+    cfg, ds = get_current_dataset(dataset_name)
 
     if ds:
-        if not ds.get("test"):
-            print(Fore.RED + "Running Data Loading test" + Style.RESET_ALL)
-            for _ in tqdm(dl, colour="blue", total=int(np.ceil(length / 16)) + 1):
-                pass
+        delete_dataset(ds["id"])
+
+    create_dataset(dataset_name, cfg["project"]["id"])
+    cfg, ds = get_current_dataset(dataset_name)
+
+    if os.path.isdir(f"ProjectDatasets/{dataset_name}"):
+        shutil.rmtree(f"ProjectDatasets/{dataset_name}")
+
+    is_2 = False
+    for i in DataLoader(processed_dataset, batch_size=1):
+        if len(i) == 2:
+            is_2 = True
+        break
+
+    print(Fore.RED + "Started Data processing" + Style.RESET_ALL)
+
+    if is_2:
+        count = save_file_and_label(processed_dataset, dataset_name)
     else:
-        for _ in tqdm(dl, colour="blue", total=int(np.ceil(length / 16)) + 1):
-            pass
+        count = save_label_data(processed_dataset, dataset_name)
+
+    affirm_size(f"ProjectDatasets/{dataset_name}")
+
+    patch_dataset_list(ds["id"], count)
+
+    print(Fore.GREEN + "Data is processed" + Style.RESET_ALL)
+
+    cfg, ds = get_current_dataset(dataset_name)
+
+
+def test_dataloading(dataset_name: str,
+                     chunk_dataset,
+                     *args,
+                     **kwargs):
+    num_workers = 2
+    batch_size = 16
+
+    cfg, ds = get_current_dataset(dataset_name)
+
+    if not ds:
+        raise RuntimeError("Dataset must be created")
+
+    length = ds["sample_count"]
+
+    if length == 0:
+        raise RuntimeError("Data has not been processed")
+
+    dl = get_dataset(chunk_dataset,
+                     False,
+                     ds["name"],
+                     batch_size,
+                     num_workers,
+                     *args,
+                     **kwargs)
+
+    print(Fore.RED + "Running Data Loading test" + Style.RESET_ALL)
+    for _ in tqdm(dl, colour="blue", total=int(np.ceil(length / batch_size)) + 1):
+        pass
 
     remove_all_temps()
 
-    for idx, i in enumerate(cfg["datasets"]):
-        if i["name"] == dataset_name:
-            cfg["datasets"][idx]["test"] = True
-
-    ds = i
-
-    if ds:
-        set_config({"datasets": cfg["datasets"]})
-        write_config()
-
     print(Fore.GREEN + "Data Loading Test Passed" + Style.RESET_ALL)
+
+
+def run_upload(dataset_name: str):
+    cfg, ds = get_current_dataset(dataset_name)
+
+    if not ds:
+        raise RuntimeError("Dataset must be created")
+
+    length = ds["sample_count"]
+
+    if os.path.isdir(f"ProjectDatasets/{dataset_name}"):
+        x = os.listdir(f"ProjectDatasets/{dataset_name}")
+        if len(x) == 0:
+            raise RuntimeError("Project Folder is empty")
+    else:
+        raise RuntimeError("Project Folder does not exist")
+
+    if length == 0:
+        raise RuntimeError("Data has not been processed")
 
     print(Fore.RED + "Started Upload" + Style.RESET_ALL)
 
-    save_path = ds["path"]
+    save_path = f"ProjectDatasets/{dataset_name}"
 
-    for path in tqdm(iterate_directory(save_path, ds["info"]["last_file_number"]),
-                     total=(len(os.listdir(save_path)) - ds["info"]["last_file_number"]),
+    for path in tqdm(iterate_directory(save_path, ds["last_file_number"]),
+                     total=(len(os.listdir(save_path)) - ds["last_file_number"]),
                      colour="blue"):
-        response = get_post_url(i["info"]["id"],
+        response = get_post_url(ds["id"],
                                 os.path.getsize(path),
                                 os.path.split(path)[-1])
 
@@ -175,32 +182,11 @@ def process_datasets(processed_dataset: ProcessorDataset,
                     os.path.split(path)[-1],
                     resp["fields"])
 
-        ds_list = get_config()["datasets"]
-        ds_list[-1]["info"] = create_dataset(dataset_name,
-                                             cfg["project"]["id"])
-
-        set_config({"datasets": ds_list})
-        cfg["datasets"] = ds_list
-        write_config()
+        cfg, ds = get_current_dataset(dataset_name)
 
     print(Fore.GREEN + "Finished Upload" + Style.RESET_ALL)
 
-    dl = DataLoader(dataset=chunk_dataset(dataset_name,
-                                          True,
-                                          length,
-                                          *args,
-                                          **kwargs),
-                    num_workers=num_workers,
-                    batch_size=32,
-                    worker_init_fn=chunk_dataset.worker_init_fn)
-
-    print(Fore.RED + "Cloud Online Epoch Test" + Style.RESET_ALL)
-    for batch in tqdm(dl, colour="blue", total=int(np.ceil(length / 32)) + 1):
-        labels, _ = batch
-
-    remove_all_temps()
-
-    print(Fore.GREEN + "Passed Online Epoch Test" + Style.RESET_ALL)
+    shutil.rmtree(f"ProjectDatasets/{dataset_name}")
 
 
 def copy_file(folder_path: str,
@@ -254,11 +240,11 @@ def save_file_and_label(dataset: ProcessorDataset,
     save_folder = os.path.join(cwd, "ProjectDatasets", ds_name)
     config = get_config()
 
-    ds_list: list = config["datasets"]
-    ds_list.append({
-        "name": ds_name,
-        "path": save_folder
-    })
+    # ds_list: list = config["datasets"]
+    # ds_list.append({
+    #     "name": ds_name,
+    #     "path": save_folder
+    # })
 
     if os.path.isdir(save_folder):
         raise UploadError("Folder already exists")
@@ -307,8 +293,8 @@ def save_file_and_label(dataset: ProcessorDataset,
                      label_batch,
                      file_batch,
                      len(file_batch))
-    ds_list[-1]["length"] = count
-    return ds_list
+    # ds_list[-1]["length"] = count
+    return count
 
 
 def save_label_data(dataset: ProcessorDataset,
@@ -521,5 +507,14 @@ def create_dataset_dir():
             file.write("\n")
             file.write("\n")
             file.write("def main():\n")
-            file.write("    # Write your data loading code here\n")
+            file.write('    """\n')
+            file.write("    This method returns all the necessary components to build your dataset\n")
+            file.write("    You will return a list of tuples, each tuple represents a different dataset\n")
+            file.write("    The elements of the tuple represent the components to construct your dataset\n")
+            file.write("    Element one will be your ProcessorDataset\n")
+            file.write("    Element two will be your IterableChunk\n")
+            file.write("    Element three will be the name of your Dataset\n")
+            file.write("    Element four will be all the args needed for your Iterable Chunk as a list\n")
+            file.write("    Element five will be all the kwargs needed for your Iterable Chunk as a Dict\n")
+            file.write('    """\n')
             file.write("    pass\n")
