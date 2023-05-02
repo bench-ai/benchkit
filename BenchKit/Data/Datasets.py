@@ -65,10 +65,14 @@ class IterableChunk(IterableDataset):
 
     @staticmethod
     def delete_dir(uid: str):
+        zip_dir = os.path.join(".", f"Temp-zip-{uid}")
         root_dir = os.path.join(".", uid)
 
         if os.path.isdir(root_dir):
             shutil.rmtree(root_dir)
+
+        if os.path.isdir(zip_dir):
+            shutil.rmtree(zip_dir)
 
     @staticmethod
     def _set_new_data(folder_path):
