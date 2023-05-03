@@ -17,6 +17,9 @@ RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1
 RUN wget https://bootstrap.pypa.io/get-pip.py
 RUN python3 get-pip.py
 
+RUN apt-get update
+RUN apt-get install git
+
 COPY ./Datasets /Bench-Project/Datasets
 COPY ./Models /Bench-Project/Models
 

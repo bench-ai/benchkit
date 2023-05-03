@@ -108,7 +108,7 @@ def update_code_version_config():
 
 
 def print_version():
-    verbose_logo("V.0.0.24 ALPHA")
+    verbose_logo("V.0.0.28 ALPHA")
 
 
 def load_project(project_name: str):
