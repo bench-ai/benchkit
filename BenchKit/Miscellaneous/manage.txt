@@ -153,9 +153,7 @@ def cli():
     if args.action == "migratecode":
         arg_dict = {
             "docker_image_path": args.fp,
-            "image_name": args.im,
             "version": args.dv,
-            "tag": args.t
         }
 
         print(Fore.RED + "Building Image" + Style.RESET_ALL)
