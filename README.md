@@ -17,7 +17,7 @@ cloud through a PyTorch-Django based framework.
   * [ChunkDataset](#chunkdataset)
   * [Putting it all together](#putting-it-all-together)
 * Logging(Coming Soon)
-* Graphing(Coming Soon)
+* Model Tracking(Coming Soon)
 * Optimization(Coming Soon)
 * [Migrate your project](#cloud-migration)
 * Deploy your trained model for inference(Coming Soon)

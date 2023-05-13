@@ -18,7 +18,7 @@ RUN wget https://bootstrap.pypa.io/get-pip.py
 RUN python3 get-pip.py
 
 RUN apt-get update
-RUN apt-get install git
+RUN apt-get install -y git
 
 COPY ./Datasets /Bench-Project/Datasets
 COPY ./Models /Bench-Project/Models
