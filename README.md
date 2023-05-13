@@ -1,12 +1,12 @@
 ﻿# *Bench-Kit*
-Welcome to Bench-Kit the Bench SDK for PyTorch - a cloud integrated 
+Welcome to Bench-Kit! The Bench SDK for PyTorch - a cloud integrated 
 library that enables you to leverage your PyTorch deep learning models on the 
 cloud through a PyTorch-Django based framework.
 ## Table of Contents
 * [Installation](#installation)
   * [Requirements](#requirements)
-  * [Build from Source](#build-from-source)
-  * [Pip Install](#pip-install)
+  * [Build from Source](#build-from-source-manual-build)
+  * [Pip Install Nightly Build](#install-nightly-build-recommended-build)
   * [Check install](#check-install)
 * [Authentication](#authentication)
   * Register a Project on [Bench](https://bench-ai.com/)
@@ -17,7 +17,7 @@ cloud through a PyTorch-Django based framework.
   * [ChunkDataset](#chunkdataset)
   * [Putting it all together](#putting-it-all-together)
 * Logging(Coming Soon)
-* Graphing(Coming Soon)
+* Model Tracking(Coming Soon)
 * Optimization(Coming Soon)
 * [Migrate your project](#cloud-migration)
 * Deploy your trained model for inference(Coming Soon)
@@ -28,7 +28,8 @@ ___
 #### Requirements
 - Requires [python 3.10](https://www.python.org/)
 - Requires [Docker](https://www.docker.com/)
-- Requires [Bench-ai account](https://bench-ai.com/signup)
+- Requires Docker to be accessed without sudo as seen [here](https://docs.docker.com/engine/install/linux-postinstall/)
+- Requires [Bench ai account](https://bench-ai.com/signup)
 
 #### Create a virtual environment
 ```bash
@@ -38,18 +39,20 @@ python3.10 -m venv venv
 # Activate the environment
 source venv/bin/activate
 
-# Upgrade the repo
+# update the build tools
 pip install -U pip setuptools wheel
 ```
-##### Build from source 
+##### Build from source (MANUAL BUILD)
+Clone the repository
+
+Run the following to install dependencies
 ```bash
-# Clone the repo 
 pip install -r requirements.txt
 ```
 
-##### Pip install
+##### Install Nightly Build (RECOMMENDED BUILD)
 ```bash
-pip install git+https://github.com/Bench-ai/TorchBench.git
+pip install git+https://github.com/Bench-ai/BenchKit.git
 ```
 #### Check Install
 ```bash
@@ -76,12 +79,12 @@ Projects have three key features
 All Key Parts familiar to any ML practitioner
 
 ```bash
-bench-kit --startproject <project_name>
+bench-kit startproject <project_name>
 ```
 
 ### Logout
 ```bash
-bench-kit --logout
+bench-kit logout
 ```
 ---
 ## Dataloaders
@@ -90,39 +93,45 @@ ProjectDatasets file.
 
 In this file you have to declare two types of datasets
 1) ProcessorDataset
-2) ChunkDataset
+2) IterableChunk
 
 #### ProcessorDataset
 
-This dataset tells us how to traverse your directory structure,
-so we can zip your files for easy access
+This class tells us how to traverse your directory structure,
+so we know which files are needed for transport to the cloud,
+and how they should be packaged.
 
 To make a Processor Dataset you need to inherit the ProcessorDataset
 class, and you need to override three methods
 
-1) If your dataset works on external files of any sort
+1) If your dataset uses large files to train
 such as images. You will need to override the
 **get_file** method
    1) This Method has to return 
    a list of strings containing the full path to your file
+   2) This method should be implemented if your dataset consists of, image files, wav files, txt files, etc.
 2) You will need to also override **get_label_and_numeric_data** This method
-packages your labels / any numeric data that is not stored in a file, as ready yo use tensor. 
+packages your labels / small numeric data in a tensor file. 
    1) This means you should convert your labels to the exact tensor values
-   you wish to feed into your model
-2)  You need to also override **__len_\_** this lets us know the size
+   you wish to feed into your model.
+   2) This would consist of class numbers, bounding box coordinates, or any other numeric data
+   that does not warrant its own file
+3) You need to also override **__len_\_** this lets us know the size
 of your dataset.
 
 #### Example
 
-Here is a example of how the ProcessorDataset dataset would look like
+Here is an example of how the ProcessorDataset dataset would look like
 for a Cat Dog object detection dataset
 
 ```python
 class CatDog(ProcessorDataset):
 
-    def __init__(self):
-        self._dataset_path = "path/to/my/ds"
-        self._data_list = os.listdir(self._dataset_path)
+    def __init__(self,
+                 dataset_path: str,
+                 data_list: list[str]):
+        self._dataset_path = dataset_path
+        self._data_list = data_list
 
     @staticmethod
     def convert_label_to_numeric(animal: str) -> int:
@@ -135,53 +144,64 @@ class CatDog(ProcessorDataset):
         split = self._data_list[item].split(".")[0]
         assert len(split) == 3
 
-        return self.convert_label_to_numeric(split[0])
+        return self.convert_label_to_numeric(split)
 
     def get_file(self, item) -> list[str]:
         return [os.path.join(self._dataset_path, self._data_list[item])]
-
 ```
 
-#### ChunkDataset
+#### IterableChunk
 
-This is the dataset your model will use to train the model, it works
-on top of the data provided by the ProcessorDataset.
+This is the dataset your model will use. It works
+by unpacking your data that has been transported to the cloud.
 
 To make a ChunkDataset you need to inherit the ChunkDataset
 class, and you need to override one method.
 
-#### __getitem__
+#### _data_iterator
 
-In get item you need to make a super call to **__getitem_\_** this will return you 
+Data Iterator is the iterator that returns samples from your data. Since
+this is the exact data that will be fed into your model, any required transformation or augmentation should
+be applied.
+
+In data iterator you need to make a super call to **_data_iterator** this will return you 
 the data you specified in ProcessorDataset, I.E. files and labels or just
 labels.
 
-From here on out preform the regular transformations you would make in 
-any other dataset.
-
 #### Example
 
-Here is a example of how the ChunkDataset dataset would look like
-for a Cat Dog object detection dataset
+Here is a example of how the IterableChunk dataset would look like, following
+the previous example
 
 ```python
-class CatDogChunk(ChunkDataset):
+class CatDogChunk(IterableChunk):
 
     def __init__(self,
-                 name: str):
-        super().__init__(name)
-        self._trans = tf.Compose([tf.PILToTensor(),
-                                  tf.Resize((50, 50), antialias=False)])
+                 name: str,
+                 cloud: bool,
+                 is_train: bool):
 
-    def __getitem__(self, item):
-        labels, file = super().__getitem__(item)
-        img_pil = Image.open(file[0]).convert('RGB')
-        return labels, self._trans(img_pil)
+        super().__init__(name, cloud)
+
+        mean = [0.4766, 0.4527, 0.3926]
+        std = [0.2275, 0.2224, 0.2210]
+
+        self._trans = tf.Compose([tf.Resize((256, 256)),
+                                  tf.RandomHorizontalFlip(),
+                                  tf.ToTensor(),
+                                  tf.Normalize(mean, std)]) if is_train else tf.Compose([tf.Resize((256, 256)),
+                                                                                         tf.ToTensor(),
+                                                                                         tf.Normalize(mean, std)])
+
+    def _data_iterator(self):
+        for labels, file in super()._data_iterator():
+            img_pil = Image.open(file[0]).convert('RGB')
+            yield labels, self._trans(img_pil)
 ```
 
 #### Putting it all together
 
-Once you have your ChunkDataset and your ProcessorDataset, it's
+Once you have your IterableChunk and your ProcessorDataset, it's
 time to add the last touches.
 
 In the main method make a call to **process_datasets()**

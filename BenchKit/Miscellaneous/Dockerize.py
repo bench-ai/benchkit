@@ -11,9 +11,8 @@ client = docker.from_env()
 
 
 def build_docker_image(docker_image_path: str | None = None,
-                       image_name: str | None = None,
-                       version: int | None = None,
-                       tag: str | None = None):
+                       version: int | None = None):
+
     cfg_project_name = get_config()["project"]["name"]
     docker_path = Path(__file__).resolve().parent / "Dockerfile"
 
@@ -30,20 +29,16 @@ def build_docker_image(docker_image_path: str | None = None,
                     line = f.readline()
 
     version = 1 if not version else version
-    tag = "latest" if not tag else tag
+    tag = "latest"
 
-    default_name = f"Bench-{cfg_project_name}-V{version}-{tag}"
-    file_name = image_name if image_name else default_name
+    file_name = f"Bench-{cfg_project_name}-V{version}-{tag}"
 
-    if not image_name:
-        name_list = file_name.split("-")
-        docker_image_name = ""
-        for i in name_list[:-1]:
-            docker_image_name += f"{i}-"
+    name_list = file_name.split("-")
+    docker_image_name = ""
+    for i in name_list[:-1]:
+        docker_image_name += f"{i}-"
 
-        docker_image_name = docker_image_name[:-1] + f":{name_list[-1]}"
-    else:
-        docker_image_name = f"{image_name}:{tag}"
+    docker_image_name = docker_image_name[:-1] + f":{name_list[-1]}"
 
     docker_image_name = docker_image_name.lower()
 
@@ -82,7 +77,7 @@ def write_entrypoint_shell():
 
         file.write("#!/bin/sh" + "\n")
         file.write("pip install -r requirements.txt" + "\n")
-        file.write("bench-kit -ss" + "\n")
+        file.write("bench-kit setsettings" + "\n")
         file.write(accelerate_string + "\n")
 
 
