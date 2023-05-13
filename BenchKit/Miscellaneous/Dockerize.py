@@ -77,7 +77,7 @@ def write_entrypoint_shell():
 
         file.write("#!/bin/sh" + "\n")
         file.write("pip install -r requirements.txt" + "\n")
-        file.write("bench-kit -ss" + "\n")
+        file.write("bench-kit setsettings" + "\n")
         file.write(accelerate_string + "\n")
 
 
