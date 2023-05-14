@@ -93,7 +93,6 @@ def create_dataset(dataset_name: str,
 
 
 def post_checkpoint_url(checkpoint_name: str):
-
     if not checkpoint_name.endswith(".tar.gz"):
         raise ValueError("Checkpoint must be a tar.gz")
 
@@ -110,6 +109,44 @@ def post_checkpoint_url(checkpoint_name: str):
     return json.loads(response.content)
 
 
+def get_checkpoint_url(checkpoint_name: str,
+                       experiment_name: str,
+                       version: int):
+    request_url = os.path.join("http://localhost:8000", "api", "tracking", "upload", "checkpoint")
+
+    response = request_executor("get",
+                                url=request_url,
+                                params={
+                                    "checkpoint_name": checkpoint_name,
+                                    "experiment_name": experiment_name,
+                                    "version": version
+                                })
+
+    return json.loads(response.content)
+
+
+def update_server(instance_id: str,
+                  progress: int | None = None,
+                  current_step: int | None = None,
+                  last_message: str | None = None):
+    request_url = os.path.join("http://localhost:8000", "api", "tracking", "server", "launch")
+
+    data_dict = {"instance_id": instance_id}
+
+    if progress:
+        data_dict["progress"] = progress
+
+    if current_step:
+        data_dict["current_step"] = current_step
+
+    if last_message:
+        data_dict["last_message"] = last_message
+
+    response = request_executor("patch",
+                                url=request_url,
+                                json=data_dict)
+
+    return json.loads(response.content)
 
 
 def get_dataset_list(project_id: str):

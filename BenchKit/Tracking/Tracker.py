@@ -3,64 +3,53 @@ from accelerate.tracking import GeneralTracker, on_main_process
 import os
 import pandas as pd
 
+from BenchKit.Miscellaneous.User import update_server
+
 
 class BenchAccelerateTracker(GeneralTracker):
-    name = "base"
+    name = "BaseTracker"
     requires_logging_directory = False
 
     @on_main_process
     def __init__(self,
-                 x_axis_name: str,
-                 y_axes_name: list[str],
-                 file_name: str,
-                 increment_length: int,
-                 version: int):
+                 epochs):
 
         super().__init__()
 
-        self._x_axis_name = x_axis_name
-        self._file_name = file_name
-        self._version = version
-        self._increment_length = increment_length
+        self._step = 0
+        self._progress_bar = epochs
+        self._instance = os.getenv("INSTANCE_ID")
 
     @on_main_process
-    def store_init_configuration(self, values: dict):
-        if values.get("x_axis_name"):
-            raise ValueError("Key x_axis_name")
+    def store_init_configuration(self,
+                                 values: dict,
+                                 message=None):
 
-        values["x_axis_name"] = self._x_axis_name
+        if not message:
+            message = json.dumps(values)[:248]
 
-        with open(f"{self._file_name}.json", "w") as f:
-            json.dump(values, f)
-
-        # run started training signal
-        # save run configuration to cloud
-        # update progress bar
+        update_server(self._instance,
+                      progress=self._progress_bar,
+                      last_message=message)
 
     @on_main_process
-    def log(self, values: dict, step: int):
+    def log(self,
+            values: dict,
+            message: str | None = None):
 
-        ## fix this
-        if not values["dataset_name"]:
-            raise ValueError("dataset_name is required")
+        if not message:
+            message = json.dumps(values)[:248]
 
-        if step < 0:
-            raise ValueError("step cannot be negative")
+        self._step += 1
 
-        if not values:
-            raise ValueError("the y value must be provided in values dictionary")
-
-    @on_main_process
-    def increment_progress(self, message: str):
-        # send a signal to increment a progress bar on the home page
-        pass
+        update_server(self._instance,
+                      current_step=self._step,
+                      last_message=message)
 
     @on_main_process
     def end_training(self):
-        pass
-        # save csv_results
-        #
-        # run successful kill signal
+        update_server(self._instance,
+                      last_message="TRAINING COMPLETED")
 
 
 class BenchTracker:

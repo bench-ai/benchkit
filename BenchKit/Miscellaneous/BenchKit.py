@@ -1,18 +1,22 @@
 import json
+import os
+import tarfile
 from pathlib import Path
+import gzip
+import shutil
+import requests
 from BenchKit.NeuralNetworks.Helpers import create_model_dir
 from BenchKit.Train.Helpers import write_script
 from .Settings import set_config, get_config
 from .Verbose import verbose_logo
 import argparse
 import getpass
-from .User import AuthenticatedUser, Credential, get_user_project, get_dataset_list, get_versions
+from .User import AuthenticatedUser, Credential, get_user_project, get_dataset_list, get_versions, get_checkpoint_url
 
 
 def create_dataset():
     from BenchKit.Data.Helpers import create_dataset_dir
     create_dataset_dir()
-
 
 
 def set_settings():
@@ -118,15 +122,47 @@ def load_project(project_name: str):
     update_code_version_config()
 
 
+def get_checkpoint(checkpoint_name: str,
+                   version: int,
+                   experiment_name: str):
+
+    request = get_checkpoint_url(f"{checkpoint_name}.tar.gz",
+                                 experiment_name,
+                                 version)
+
+    mem_zip = requests.get(request)
+
+    with open(f"{checkpoint_name}.tar.gz", 'wb') as f:
+        f.write(mem_zip.content)
+
+    with gzip.open(f"{checkpoint_name}.tar.gz", 'rb') as f_in:
+        with open(f"{checkpoint_name}.tar", 'wb') as f_out:
+            shutil.copyfileobj(f_in, f_out)
+
+    with tarfile.open(f"{checkpoint_name}.tar", 'r') as tar:
+        tar.extractall()
+
+    os.remove(f"{checkpoint_name}.tar.gz")
+    os.remove(f"{checkpoint_name}.tar")
+
+
 def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("action",
-                        choices=["startproject", "logout", "setsettings"],
+                        choices=["startproject", "logout", "setsettings", "getcheckpoint"],
                         nargs="?",
                         default=None)
 
     parser.add_argument("input_value",
+                        nargs='?',
+                        default=None)
+
+    parser.add_argument("input_value1",
+                        nargs='?',
+                        default=None)
+
+    parser.add_argument("input_value2",
                         nargs='?',
                         default=None)
 
@@ -145,6 +181,21 @@ def main():
 
     if args.action == "setsettings":
         set_settings()
+
+    if args.action == "getcheckpoint":
+
+        if not args.input_value:
+            raise ValueError("Experiment name not provided")
+
+        if not args.input_value1:
+            raise ValueError("Checkpoint name not provided")
+
+        if not args.input_value2:
+            raise ValueError("Experiment name not provided")
+
+        get_checkpoint(args.input_value1,
+                       args.input_value2,
+                       args.input_value)
 
     if args.action == "startproject":
 
