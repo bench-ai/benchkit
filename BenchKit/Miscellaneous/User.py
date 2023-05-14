@@ -22,8 +22,6 @@ def authorize_response(func):
 
         if response.status_code != 200:
 
-            # print(json.loads(response.content))
-
             for i in method:
 
                 try:
@@ -60,7 +58,7 @@ def get_current_user() -> dict:
 
 def create_dataset(dataset_name: str,
                    project_id: str):
-    request_url = os.path.join("http://localhost:8000", "api", "dataset", "user", "list")
+    request_url = os.path.join(get_main_url(), "api", "dataset", "user", "list")
 
     try:
         response = request_executor("post",
@@ -97,7 +95,7 @@ def post_checkpoint_url(checkpoint_name: str):
         raise ValueError("Checkpoint must be a tar.gz")
 
     instance_id = os.getenv("INSTANCE_ID")
-    request_url = os.path.join("http://localhost:8000", "api", "tracking", "upload", "checkpoint")
+    request_url = os.path.join(get_main_url(), "api", "tracking", "upload", "checkpoint")
 
     response = request_executor("post",
                                 url=request_url,
@@ -112,7 +110,7 @@ def post_checkpoint_url(checkpoint_name: str):
 def get_checkpoint_url(checkpoint_name: str,
                        experiment_name: str,
                        version: int):
-    request_url = os.path.join("http://localhost:8000", "api", "tracking", "upload", "checkpoint")
+    request_url = os.path.join(get_main_url(), "api", "tracking", "upload", "checkpoint")
 
     response = request_executor("get",
                                 url=request_url,
@@ -129,7 +127,7 @@ def update_server(instance_id: str,
                   progress: int | None = None,
                   current_step: int | None = None,
                   last_message: str | None = None):
-    request_url = os.path.join("http://localhost:8000", "api", "tracking", "server", "launch")
+    request_url = os.path.join(get_main_url(), "api", "tracking", "server", "launch")
 
     data_dict = {"instance_id": instance_id}
 
@@ -150,7 +148,7 @@ def update_server(instance_id: str,
 
 
 def get_dataset_list(project_id: str):
-    request_url = os.path.join("http://localhost:8000", "api", "dataset", "user", "list")
+    request_url = os.path.join(get_main_url(), "api", "dataset", "user", "list")
     next_page = 1
     dataset_list = []
 
@@ -176,7 +174,7 @@ def get_dataset_list(project_id: str):
 
 def patch_dataset_list(dataset_id: str,
                        length: int):
-    request_url = os.path.join("http://localhost:8000", "api", "dataset", "user", "list")
+    request_url = os.path.join(get_main_url(), "api", "dataset", "user", "list")
 
     response = request_executor("patch",
                                 url=request_url,
@@ -218,7 +216,7 @@ def get_post_url(dataset_id: str,
 
 
 def delete_dataset(dataset_id: str):
-    request_url = os.path.join("http://localhost:8000", "api", "dataset", "upload")
+    request_url = os.path.join(get_main_url(), "api", "dataset", "upload")
 
     response = request_executor("delete",
                                 url=request_url,
@@ -262,7 +260,7 @@ def get_get_url(dataset_id: str,
 
 
 def get_gpu_count():
-    request_url = os.path.join("http://localhost:8000", "api", "pricing", "plan", "train", "gpu-count")
+    request_url = os.path.join(get_main_url(), "api", "pricing", "plan", "train", "gpu-count")
 
     project_name = get_config()["project"]["name"]
 
@@ -276,7 +274,7 @@ def get_gpu_count():
 def project_image_upload_url(tar_size: int,
                              version: int,
                              tar_name: int):
-    request_url = os.path.join("http://localhost:8000", "api", "project", "image")
+    request_url = os.path.join(get_main_url(), "api", "project", "image")
 
     project_name = get_config()["project"]["name"]
 
@@ -291,7 +289,7 @@ def project_image_upload_url(tar_size: int,
 
 
 def get_versions():
-    request_url = os.path.join("http://localhost:8000", "api", "project", "image")
+    request_url = os.path.join(get_main_url(), "api", "project", "image")
 
     project_name = get_config()["project"]["name"]
 
@@ -303,7 +301,7 @@ def get_versions():
 
 
 def delete_all_images():
-    request_url = os.path.join("http://localhost:8000", "api", "project", "delete", "all", "images")
+    request_url = os.path.join(get_main_url(), "api", "project", "delete", "all", "images")
 
     project_name = get_config()["project"]["name"]
 
