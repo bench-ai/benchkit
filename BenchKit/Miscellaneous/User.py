@@ -92,6 +92,26 @@ def create_dataset(dataset_name: str,
         raise RuntimeError("Unable to create Dataset")
 
 
+def upload_checkpoint(checkpoint_name: str):
+
+    if not checkpoint_name.endswith(".pt"):
+        raise ValueError("Checkpoint must be a pt file")
+
+    instance_id = os.getenv("INSTANCE_ID")
+    request_url = os.path.join("http://localhost:8000", "api", "tracking", "upload", "checkpoint")
+
+    response = request_executor("post",
+                                url=request_url,
+                                json={
+                                    "checkpoint_name": checkpoint_name,
+                                    "instance_id": instance_id
+                                })
+
+    return json.loads(response.content)
+
+
+
+
 def get_dataset_list(project_id: str):
     request_url = os.path.join("http://localhost:8000", "api", "dataset", "user", "list")
     next_page = 1
