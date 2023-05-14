@@ -33,6 +33,8 @@ class IterableChunk(IterableDataset):
                  cloud: bool):
 
         self._cloud = cloud
+        self._name = name
+        self.chunk_list = None
 
         cfg = get_config()
 
@@ -48,20 +50,13 @@ class IterableChunk(IterableDataset):
         if not entered:
             raise RuntimeError("Dataset Does not appear to exist")
 
-        if not cloud:
-            data_path = f"ProjectDatasets/{name}"
-            self.chunk_list = [os.path.join(data_path, chunk) for chunk in os.listdir(data_path)]
-        else:
-            self.chunk_list = get_dataset(dataset_id)
-
         self._dataset_id = dataset_id
-
-        self.chunk_list = sorted(self.chunk_list, key=lambda x: int(os.path.split(x)[-1].split("-")[1]))
 
         self.length = length
 
-        self.start_index = 0
         self.end_index = length
+        self.start_index = None
+        self.init_start_index = 0
 
     @staticmethod
     def delete_dir(uid: str):
@@ -180,16 +175,26 @@ class IterableChunk(IterableDataset):
             self.start_index += 1
 
     def __iter__(self):
+        self.start_index = self.init_start_index
+
+        if not self._cloud:
+            data_path = f"ProjectDatasets/{self._name}"
+            self.chunk_list = [os.path.join(data_path, chunk) for chunk in os.listdir(data_path)]
+        else:
+            self.chunk_list = get_dataset(self._dataset_id)
+
+        self.chunk_list = sorted(self.chunk_list, key=lambda x: int(os.path.split(x)[-1].split("-")[1]))
+
         return iter(self._data_iterator())
 
     @staticmethod
     def worker_init_fn(worker_id):
         worker_info = torch.utils.data.get_worker_info()
         dataset = worker_info.dataset
-        overall_start = dataset.start_index
+        overall_start = dataset.init_start_index
         overall_end = dataset.end_index
 
         per_worker = int(math.ceil((overall_end - overall_start) / float(worker_info.num_workers)))
 
-        dataset.start_index = overall_start + worker_id * per_worker
-        dataset.end_index = min(dataset.start_index + per_worker, overall_end)
+        dataset.init_start_index = overall_start + worker_id * per_worker
+        dataset.end_index = min(dataset.init_start_index + per_worker, overall_end)

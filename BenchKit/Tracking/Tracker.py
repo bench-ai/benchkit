@@ -12,6 +12,7 @@ class BenchAccelerateTracker(GeneralTracker):
 
     @on_main_process
     def __init__(self,
+                 run_name: str,
                  epochs):
 
         super().__init__()
@@ -19,6 +20,11 @@ class BenchAccelerateTracker(GeneralTracker):
         self._step = 0
         self._progress_bar = epochs
         self._instance = os.getenv("INSTANCE_ID")
+        self.run_name = run_name
+
+    @property
+    def tracker(self):
+        return self.run_name
 
     @on_main_process
     def store_init_configuration(self,
@@ -35,7 +41,8 @@ class BenchAccelerateTracker(GeneralTracker):
     @on_main_process
     def log(self,
             values: dict,
-            message: str | None = None):
+            message: str | None = None,
+            step: int | None = None):
 
         if not message:
             message = json.dumps(values)[:248]
