@@ -22,8 +22,6 @@ def authorize_response(func):
 
         if response.status_code != 200:
 
-            # print(json.loads(response.content))
-
             for i in method:
 
                 try:
