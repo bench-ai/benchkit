@@ -3,7 +3,10 @@ import os.path
 from pathlib import Path
 
 from accelerate import Accelerator
+
+
 def get_accelerator(split_batches=False,
+                    log_with=None,
                     even_batches: bool = True,
                     step_scheduler_with_optimizer: bool = True,
                     dynamo_backend: str = "no",
@@ -12,7 +15,9 @@ def get_accelerator(split_batches=False,
                     cpu: bool | None = None,
                     rng_types: list[str] | None = None,
                     kwargs_handlers: list | None = None) -> Accelerator:
+
     kwargs = {'split_batches': split_batches,
+              'log_with': log_with,
               'even_batches': even_batches,
               'step_scheduler_with_optimizer': step_scheduler_with_optimizer,
               'dynamo_backend': dynamo_backend,
@@ -48,4 +53,3 @@ def write_script():
                 while line:
                     file.write(line)
                     line = read_file.readline()
-
