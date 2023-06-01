@@ -1,15 +1,19 @@
 import json
 import os
-import pathlib
 from functools import wraps
 import requests
-from .Settings import get_main_url, get_credentials, get_config, convert_iso_time
+from .Settings import get_main_url, get_config, convert_iso_time
+from dotenv import load_dotenv
 
 
 def authorize_response(func):
     def run_request(*args, **kwargs) -> requests.Response:
-        access, _ = AuthenticatedUser.read_credentials()
-        header = {'Authorization': f"Bearer {access}"}
+        auth = AuthenticatedUser()
+        header = {'project-id': auth.project_id,
+                  'api-key': auth.api_key}
+
+        print(header)
+
         kwargs.update({"headers": header})
         response: requests.Response = func(*args, **kwargs)
         return response
@@ -18,24 +22,15 @@ def authorize_response(func):
     def wrapper(*args, **kwargs):
 
         response = run_request(*args, **kwargs)
-        method = [AuthenticatedUser.refresh, AuthenticatedUser.login]
 
-        if response.status_code != 200:
+        if response.status_code == 500:
+            raise RuntimeError("500 Error server not working")
 
-            for i in method:
-
-                try:
-                    i()
-                except Credential:
-                    pass
-
-                response = run_request(*args, **kwargs)
-                if response.status_code == 200:
-                    return response
-
-            raise Credential(f"Unable to run method, credentials not verifiable code:{response.status_code}")
-        else:
+        elif response.status_code % 2 == 0:
             return response
+
+        else:
+            raise RuntimeError(f"Got error {response.status_code}, ERROR message: {json.loads(response.content)}")
 
     return wrapper
 
@@ -46,6 +41,15 @@ class Credential(Exception):
 
 class UnknownRequest(Exception):
     pass
+
+
+def test_login() -> bool:
+    print("here")
+    request_url = os.path.join(get_main_url(), "api", "auth", "project", "login")
+    response = request_executor("get",
+                                url=request_url)
+
+    return json.loads(response.content)["success"]
 
 
 def get_current_user() -> dict:
@@ -147,25 +151,19 @@ def update_server(instance_id: str,
     return json.loads(response.content)
 
 
-def get_dataset_list(project_id: str):
-    request_url = os.path.join(get_main_url(), "api", "dataset", "user", "list")
+def get_dataset_list():
+    request_url = os.path.join(get_main_url(), "api", "dataset", "project", "get")
     next_page = 1
     dataset_list = []
 
     while next_page:
         response = request_executor("get",
                                     url=request_url,
-                                    params={"page": 1,
-                                            "project": project_id,
-                                            "raw": True})
+                                    params={"page": 1})
 
-        if response.status_code != 200:
-            raise RuntimeError("Cannot get datasets")
-        else:
-
-            response = json.loads(response.content)
-            next_page = response["next_page"]
-            dataset_list.extend(response["datasets"])
+        response = json.loads(response.content)
+        next_page = response["next_page"]
+        dataset_list.extend(response["datasets"])
 
     dataset_list.sort(key=lambda x: convert_iso_time(x["update_timestamp"]))
 
@@ -187,18 +185,13 @@ def patch_dataset_list(dataset_id: str,
         raise RuntimeError("Project does not exists please register it on bench")
 
 
-def get_user_project(project_name: str) -> dict:
-    request_url = os.path.join(get_main_url(), "api", "project", "user", "list")
+def get_user_project() -> dict:
+    request_url = os.path.join(get_main_url(), "api", "project", "unique")
 
     response = request_executor("get",
-                                url=request_url,
-                                params={"name": project_name,
-                                        "page": 1})
+                                url=request_url)
 
-    if response.status_code != 200:
-        raise RuntimeError("Project does not exists please register it on bench")
-    else:
-        return json.loads(response.content)["projects"][0]
+    return json.loads(response.content)
 
 
 def get_post_url(dataset_id: str,
@@ -289,13 +282,10 @@ def project_image_upload_url(tar_size: int,
 
 
 def get_versions():
-    request_url = os.path.join(get_main_url(), "api", "project", "image")
-
-    project_name = get_config()["project"]["name"]
+    request_url = os.path.join(get_main_url(), "api", "project", "unique", "all", "images")
 
     response = request_executor("get",
-                                url=request_url,
-                                params={"project_name": project_name})
+                                url=request_url)
 
     return json.loads(response.content)
 
@@ -329,83 +319,12 @@ def request_executor(req_type: str, **kwargs):
 
 
 class AuthenticatedUser:
+    @property
+    def api_key(self):
+        load_dotenv()
+        return os.getenv("API_KEY")
 
-    @staticmethod
-    def delete_credentials():
-        current_credentials_path = pathlib.Path(__file__).resolve().parent / "Credentials.json"
-        if os.path.exists(current_credentials_path):
-            os.remove(current_credentials_path)
-
-    @staticmethod
-    def write_credentials(new_data: dict):
-        current_credentials_path = pathlib.Path(__file__).resolve().parent / "Credentials.json"
-
-        cred_dict = {}
-        if os.path.isfile(current_credentials_path):
-            access, refresh = AuthenticatedUser.read_credentials()
-            cred_dict.update({"access_token": access,
-                              "refresh_token": refresh})
-
-        cred_dict.update(new_data)
-
-        with open(current_credentials_path, "w") as file:
-            json.dump(cred_dict, file)
-
-    @staticmethod
-    def read_credentials() -> tuple[str, str]:
-        current_credentials_path = pathlib.Path(__file__).resolve().parent / "Credentials.json"
-
-        curr_json = {}
-        if not os.path.isfile(current_credentials_path):
-            AuthenticatedUser.login()
-
-        with open(current_credentials_path, "r") as file:
-            curr_json.update(json.load(file))
-
-        return curr_json["access_token"], curr_json["refresh_token"]
-
-    @staticmethod
-    def refresh():
-        request_url = os.path.join(get_main_url(), "api", "auth", "token", "refresh")
-        _, refresh = AuthenticatedUser.read_credentials()
-        response = requests.get(url=request_url,
-                                cookies={"refresh_token": refresh})
-
-        if response.status_code != 200:
-            raise Credential("Access Token could not be Refreshed try logging in again")
-        else:
-            access_token = json.loads(response.content)
-            AuthenticatedUser.write_credentials(access_token)
-
-    @staticmethod
-    def login():
-        request_url = os.path.join(get_main_url(), "api", "auth", "login")
-
-        username, password = get_credentials()
-        payload = {
-            "username": username,
-            "password": password
-        }
-
-        response = requests.post(request_url,
-                                 json=payload)
-
-        if response.status_code != 200:
-            raise Credential("invalid username / password")
-        else:
-            content = json.loads(response.content)
-            cred_dict = {"access_token": content["access_token"],
-                         "refresh_token": response.cookies.get("refresh_token")}
-
-            AuthenticatedUser.write_credentials(cred_dict)
-
-    @staticmethod
-    def logout():
-        request_url = os.path.join(get_main_url(), "api", "auth", "logout")
-        response = requests.post(request_url)
-
-        if response.status_code != 200:
-            raise Credential("Unable to logout")
-        else:
-            AuthenticatedUser.delete_credentials()
-            print("...logged out")
+    @property
+    def project_id(self):
+        load_dotenv()
+        return os.getenv("PROJECT_ID")

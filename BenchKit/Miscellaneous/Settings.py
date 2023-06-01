@@ -16,12 +16,13 @@ def get_config() -> dict:
     return config
 
 
-def get_credentials() -> tuple[str, str]:
-    return get_config()["user_credentials"]["username"], get_config()["user_credentials"]["password"]
+# def get_credentials() -> tuple[str, str]:
+#     return get_config()["user_credentials"]["username"], get_config()["user_credentials"]["password"]
 
 
 def get_main_url() -> str:
-    return "https://api.bench-ai.com"
+    return "http://localhost:8000"
+    # return "https://api.bench-ai.com"
 
 
 def set_config(new_config: dict):

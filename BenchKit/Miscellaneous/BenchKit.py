@@ -10,8 +10,7 @@ from BenchKit.Train.Helpers import write_script
 from .Settings import set_config, get_config
 from .Verbose import verbose_logo
 import argparse
-import getpass
-from .User import AuthenticatedUser, Credential, get_user_project, get_dataset_list, get_versions, get_checkpoint_url
+from .User import get_user_project, get_dataset_list, get_versions, get_checkpoint_url, test_login
 
 
 def create_dataset():
@@ -28,33 +27,27 @@ def set_settings():
         json.dump(x, file, indent=4)
 
 
-def login():
-    try:
-        AuthenticatedUser.login()
-    except Credential:
-        print("Login Failed invalid credentials, you can also attempt to login manually using -inm or --loginm flag")
-
-
 def logout():
-    AuthenticatedUser.logout()
     write_config_template(lgn=False)
     set_settings()
+    if os.path.exists(".env"):
+        os.remove(".env")
 
 
 def login_manual():
-    username = input("Username: ")
-    password = getpass.getpass()
+    project_id = input("project-id: ")
+    api_key = input("api-key: ")
 
-    cred_dict = {
-        "user_credentials": {
-            "username": username,
-            "password": password
-        }
-    }
+    with open(".env", "w") as file:
+        file.writelines([f"API_KEY={api_key}\n",
+                         f"PROJECT_ID={project_id}\n"])
 
-    set_config(cred_dict)
-    login()
-    write_config()
+    try:
+        test_login()
+        write_config()
+    except RuntimeError:
+        logout()
+        raise ValueError("Credentials invalid")
 
 
 def write_config_template(lgn=True):
@@ -89,18 +82,14 @@ def write_manager():
                 line = f.readline()
 
 
-def set_project(project_name: str):
-    data = get_user_project(project_name)
+def set_project():
+    data = get_user_project()
     set_config({"project": data})
     write_config()
 
 
 def update_dataset_config():
-    config = get_config()
-    project_id = config["project"]["id"]
-
-    ds_list: list = get_dataset_list(project_id)
-
+    ds_list: list = get_dataset_list()
     set_config({"datasets": ds_list})
     write_config()
 
@@ -115,9 +104,9 @@ def print_version():
     verbose_logo("V.0.0.28 ALPHA")
 
 
-def load_project(project_name: str):
+def load_project():
     write_config_template()
-    set_project(project_name)
+    set_project()
     update_dataset_config()
     update_code_version_config()
 
@@ -199,10 +188,7 @@ def main():
 
     if args.action == "startproject":
 
-        if not args.input_value:
-            raise ValueError("Project Name not provided")
-
-        load_project(args.input_value)
+        load_project()
         write_manager()
         create_dataset()
         create_model_dir()

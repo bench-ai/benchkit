@@ -1,9 +1,3 @@
 {
-  "user_credentials":
-  {
-    "username": "",
-    "password": ""
-  },
-
   "datasets": []
 }
