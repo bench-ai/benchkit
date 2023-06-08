@@ -10,8 +10,8 @@ import shutil
 import pathlib
 from tqdm import tqdm
 from BenchKit.Data.Datasets import ProcessorDataset
-from BenchKit.Miscellaneous.BenchKit import update_dataset_config
-from BenchKit.Miscellaneous.User import create_dataset, get_post_url, patch_dataset_list, delete_dataset
+from BenchKit.Miscellaneous.User import create_dataset, get_post_url, patch_dataset_list, delete_dataset, \
+    get_current_dataset
 
 megabyte = 1_024 ** 2
 gigabyte = megabyte * 1024
@@ -52,6 +52,7 @@ def upload_file(url,
                 file_path,
                 save_path,
                 fields):
+
     with open(file_path, 'rb') as f:
         files = {'file': (save_path, f)}
         http_response = requests.post(url,
@@ -62,31 +63,16 @@ def upload_file(url,
         raise RuntimeError(f"Failed to Upload {file_path}")
 
 
-def get_current_dataset(ds_name: str):
-    from BenchKit.Miscellaneous.Settings import get_config
-    update_dataset_config()
-
-    cfg = get_config()
-    ds = None
-
-    for i in cfg["datasets"]:
-        if i["name"] == ds_name:
-            ds = i
-            break
-
-    return cfg, ds
-
-
 def create_dataset_zips(processed_dataset: ProcessorDataset,
                         dataset_name: str):
 
-    cfg, ds = get_current_dataset(dataset_name)
+    ds = get_current_dataset(dataset_name)
 
     if ds:
         delete_dataset(ds["id"])
 
-    create_dataset(dataset_name, cfg["project"]["id"])
-    cfg, ds = get_current_dataset(dataset_name)
+    create_dataset(dataset_name)
+    ds = get_current_dataset(dataset_name)
 
     if os.path.isdir(f"ProjectDatasets/{dataset_name}"):
         shutil.rmtree(f"ProjectDatasets/{dataset_name}")
@@ -110,8 +96,6 @@ def create_dataset_zips(processed_dataset: ProcessorDataset,
 
     print(Fore.GREEN + "Data is processed" + Style.RESET_ALL)
 
-    cfg, ds = get_current_dataset(dataset_name)
-
 
 def test_dataloading(dataset_name: str,
                      chunk_dataset,
@@ -120,7 +104,7 @@ def test_dataloading(dataset_name: str,
     num_workers = 2
     batch_size = 16
 
-    cfg, ds = get_current_dataset(dataset_name)
+    ds = get_current_dataset(dataset_name)
 
     if not ds:
         raise RuntimeError("Dataset must be created")
@@ -148,7 +132,7 @@ def test_dataloading(dataset_name: str,
 
 
 def run_upload(dataset_name: str):
-    cfg, ds = get_current_dataset(dataset_name)
+    ds = get_current_dataset(dataset_name)
 
     if not ds:
         raise RuntimeError("Dataset must be created")
@@ -172,6 +156,7 @@ def run_upload(dataset_name: str):
     for path in tqdm(iterate_directory(save_path, ds["last_file_number"]),
                      total=(len(os.listdir(save_path)) - ds["last_file_number"]),
                      colour="blue"):
+
         response = get_post_url(ds["id"],
                                 os.path.getsize(path),
                                 os.path.split(path)[-1])
@@ -182,7 +167,7 @@ def run_upload(dataset_name: str):
                     os.path.split(path)[-1],
                     resp["fields"])
 
-        cfg, ds = get_current_dataset(dataset_name)
+        ds = get_current_dataset(dataset_name)
 
     print(Fore.GREEN + "Finished Upload" + Style.RESET_ALL)
 
@@ -235,16 +220,8 @@ def save_folder_data(save_folder: str,
 
 def save_file_and_label(dataset: ProcessorDataset,
                         ds_name: str):
-    from BenchKit.Miscellaneous.Settings import get_config
     cwd = os.getcwd()
     save_folder = os.path.join(cwd, "ProjectDatasets", ds_name)
-    config = get_config()
-
-    # ds_list: list = config["datasets"]
-    # ds_list.append({
-    #     "name": ds_name,
-    #     "path": save_folder
-    # })
 
     if os.path.isdir(save_folder):
         raise UploadError("Folder already exists")
@@ -293,7 +270,6 @@ def save_file_and_label(dataset: ProcessorDataset,
                      label_batch,
                      file_batch,
                      len(file_batch))
-    # ds_list[-1]["length"] = count
     return count
 
 

@@ -1,37 +1,33 @@
 import docker
 import subprocess
 from BenchKit.Data.Helpers import upload_file
-from BenchKit.Miscellaneous.Settings import get_config
-from BenchKit.Miscellaneous.BenchKit import update_code_version_config
 import os
 from pathlib import Path
-from BenchKit.Miscellaneous.User import get_gpu_count, project_image_upload_url
+from BenchKit.Miscellaneous.User import project_image_upload_url, get_user_project
 
 client = docker.from_env()
 
 
-def build_docker_image(docker_image_path: str | None = None,
-                       version: int | None = None):
-
-    cfg_project_name = get_config()["project"]["name"]
+def build_docker_image(version: int | None = None):
+    project = get_user_project()
     docker_path = Path(__file__).resolve().parent / "Dockerfile"
 
     if not os.path.isfile("requirements.txt"):
         raise RuntimeError("requirements.txt file is needed")
 
-    if not os.path.isfile("Dockerfile") and not docker_image_path:
-
-        with open(docker_path, "r") as f:
-            with open("Dockerfile", "w") as file:
+    with open(docker_path, "r") as f:
+        with open("Dockerfile", "w") as file:
+            line = f.readline()
+            while line:
+                file.write(line)
                 line = f.readline()
-                while line:
-                    file.write(line)
-                    line = f.readline()
 
     version = 1 if not version else version
     tag = "latest"
 
-    file_name = f"Bench-{cfg_project_name}-V{version}-{tag}"
+    project_name: str = project["id"].replace("-", "")
+
+    file_name = f"Bench-{project_name}-V{version}-{tag}"
 
     name_list = file_name.split("-")
     docker_image_name = ""
@@ -55,30 +51,11 @@ def build_docker_image(docker_image_path: str | None = None,
 
 
 def write_entrypoint_shell():
-    gpu_dict = get_gpu_count()
 
-    # test this out
-    prefix_flags = ["--dynamo_backend no",
-                    f"--num_processes {gpu_dict['gpu_count']}",
-                    "--num_machines 1",
-                    "--mixed_precision no"]
-
-    if gpu_dict["multi"]:
-        prefix_flags.append("--multi_gpu")
-
-    accelerate_string = 'accelerate launch '
-
-    for i in prefix_flags:
-        accelerate_string += f"{i} "
-
-    accelerate_string += "TrainScript.py"
-
-    with open("entrypoint.sh", "w") as file:
-
-        file.write("#!/bin/sh" + "\n")
-        file.write("pip install -r requirements.txt" + "\n")
-        file.write("bench-kit setsettings" + "\n")
-        file.write(accelerate_string + "\n")
+    entry_point = Path(__file__).resolve().parent / "entrypoint.txt"
+    with open(entry_point, "r") as r_file:
+        with open("entrypoint.sh", "w") as w_file:
+            w_file.writelines(r_file.readlines())
 
 
 def save_image_tarball(tarball_name: str, image_name: str):
@@ -101,5 +78,4 @@ def upload_tarball(tarball_name: str,
                 tarball_name,
                 url_data["fields"])
 
-    update_code_version_config()
     os.remove(tarball_name)

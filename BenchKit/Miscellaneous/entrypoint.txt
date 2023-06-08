@@ -1,0 +1,21 @@
+#!/bin/sh
+
+# Assign values to variables from environment variables
+gpu_count="$GPU_COUNT"
+project_id="$PROJECT_ID"
+api_key="$API_KEY"
+
+# Install requirements
+pip install -r requirements.txt
+
+# Start project using bench-kit
+bench-kit start-project "$project_id" "$api_key"
+
+if [ "$gpu_count" -gt 1 ]; then
+    echo "GPU count is greater than 1."
+    accelerate launch --dynamo_backend no --num_processes "$gpu_count" --num_machines 1 --mixed_precision no TrainScript.py
+
+else
+    echo "GPU count is not greater than 1."
+    accelerate launch --dynamo_backend no --num_processes "$gpu_count" --num_machines 1 --mixed_precision no --multi_gpu TrainScript.py
+fi

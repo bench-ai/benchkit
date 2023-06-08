@@ -6,8 +6,7 @@ import torch
 from torch.utils.data import Dataset, IterableDataset
 from typing import Any, final
 import shutil
-from BenchKit.Miscellaneous.Settings import get_config
-from BenchKit.Miscellaneous.User import get_dataset, get_get_url
+from BenchKit.Miscellaneous.User import get_dataset, get_get_url, get_current_dataset
 
 
 class ProcessorDataset(Dataset):
@@ -36,25 +35,14 @@ class IterableChunk(IterableDataset):
         self._name = name
         self.chunk_list = None
 
-        cfg = get_config()
+        dataset = get_current_dataset(name)
 
-        entered = False
+        if not dataset:
+            raise RuntimeError("Dataset does not exist")
 
-        for i in cfg.get("datasets"):
-
-            if i["name"] == name:
-                entered = True
-                length = i["sample_count"]
-                dataset_id = i["id"]
-
-        if not entered:
-            raise RuntimeError("Dataset Does not appear to exist")
-
-        self._dataset_id = dataset_id
-
-        self.length = length
-
-        self.end_index = length
+        self._dataset_id = dataset["id"]
+        self.length = dataset["sample_count"]
+        self.end_index = dataset["sample_count"]
         self.start_index = None
         self.init_start_index = 0
 

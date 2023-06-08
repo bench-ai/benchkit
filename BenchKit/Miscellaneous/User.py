@@ -1,9 +1,44 @@
 import json
 import os
 from functools import wraps
+from pathlib import Path
 import requests
 from .Settings import get_main_url, get_config, convert_iso_time
-from dotenv import load_dotenv
+
+
+class AuthenticatedUser:
+    cred_path = Path(__file__).resolve().parent / "credentials.json"
+
+    def __init__(self):
+        self.cred_dict = {}
+
+        with open(self.cred_path, "r") as file:
+            self.cred_dict.update(json.load(file))
+
+    @property
+    def api_key(self):
+        return self.cred_dict["api_key"]
+
+    @property
+    def project_id(self):
+        return self.cred_dict["project_id"]
+
+
+def get_project_id() -> str:
+    auth = AuthenticatedUser()
+    return auth.project_id
+
+
+def get_current_dataset(ds_name: str):
+    ds_list: list = get_dataset_list()
+    ds = None
+
+    for i in ds_list:
+        if i["name"] == ds_name:
+            ds = i
+            break
+
+    return ds
 
 
 def authorize_response(func):
@@ -26,7 +61,7 @@ def authorize_response(func):
         if response.status_code == 500:
             raise RuntimeError("500 Error server not working")
 
-        elif response.status_code % 2 == 0:
+        elif str(response.status_code).startswith('2'):
             return response
 
         else:
@@ -44,7 +79,6 @@ class UnknownRequest(Exception):
 
 
 def test_login() -> bool:
-    print("here")
     request_url = os.path.join(get_main_url(), "api", "auth", "project", "login")
     response = request_executor("get",
                                 url=request_url)
@@ -60,38 +94,43 @@ def get_current_user() -> dict:
     return json.loads(response.content)
 
 
-def create_dataset(dataset_name: str,
-                   project_id: str):
-    request_url = os.path.join(get_main_url(), "api", "dataset", "user", "list")
+def create_dataset(dataset_name: str):
+    request_url = os.path.join(get_main_url(), "api", "dataset", "project", "list")
 
-    try:
-        response = request_executor("post",
-                                    url=request_url,
-                                    json={
-                                        "name": dataset_name,
-                                        "project": project_id,
-                                        "raw": True})
+    response = request_executor("post",
+                                url=request_url,
+                                json={
+                                    "name": dataset_name,
+                                    "raw": True})
 
-        code = 200
-    except Credential as e:
-        code = int(str(e).split(":")[-1])
+    return json.loads(response.content)
 
-    if code == 409:
-        response = request_executor("get",
-                                    url=request_url,
-                                    params={"page": 1,
-                                            "name": dataset_name,
-                                            "project": project_id,
-                                            "raw": True})
 
-        if response.status_code == 200:
-            return json.loads(response.content)["datasets"][0]
-        else:
-            raise RuntimeError("Unable to find Dataset")
-    elif code == 200:
-        return json.loads(response.content)
-    else:
-        raise RuntimeError("Unable to create Dataset")
+def list_all_checkpoints():
+    request_url = os.path.join(get_main_url(),
+                               "api",
+                               "tracking",
+                               "list",
+                               "checkpoint")
+
+    response = request_executor("get",
+                                url=request_url)
+
+    return json.loads(response.content)
+
+
+def delete_checkpoints(checkpoint_id: str):
+    request_url = os.path.join(get_main_url(),
+                               "api",
+                               "tracking",
+                               "list",
+                               "checkpoint")
+
+    response = request_executor("delete",
+                                url=request_url,
+                                params={"checkpoint_id": checkpoint_id})
+
+    return json.loads(response.content)
 
 
 def post_checkpoint_url(checkpoint_name: str):
@@ -111,17 +150,13 @@ def post_checkpoint_url(checkpoint_name: str):
     return json.loads(response.content)
 
 
-def get_checkpoint_url(checkpoint_name: str,
-                       experiment_name: str,
-                       version: int):
+def get_checkpoint_url(checkpoint_id):
     request_url = os.path.join(get_main_url(), "api", "tracking", "upload", "checkpoint")
 
     response = request_executor("get",
                                 url=request_url,
                                 params={
-                                    "checkpoint_name": checkpoint_name,
-                                    "experiment_name": experiment_name,
-                                    "version": version
+                                    "checkpoint_id": checkpoint_id
                                 })
 
     return json.loads(response.content)
@@ -152,7 +187,7 @@ def update_server(instance_id: str,
 
 
 def get_dataset_list():
-    request_url = os.path.join(get_main_url(), "api", "dataset", "project", "get")
+    request_url = os.path.join(get_main_url(), "api", "dataset", "project", "list")
     next_page = 1
     dataset_list = []
 
@@ -172,17 +207,15 @@ def get_dataset_list():
 
 def patch_dataset_list(dataset_id: str,
                        length: int):
-    request_url = os.path.join(get_main_url(), "api", "dataset", "user", "list")
 
-    response = request_executor("patch",
-                                url=request_url,
-                                json={
-                                    "id": dataset_id,
-                                    "sample_count": length
-                                })
+    request_url = os.path.join(get_main_url(), "api", "dataset", "project", "list")
 
-    if response.status_code != 200:
-        raise RuntimeError("Project does not exists please register it on bench")
+    request_executor("patch",
+                     url=request_url,
+                     json={
+                         "id": dataset_id,
+                         "sample_count": length
+                     })
 
 
 def get_user_project() -> dict:
@@ -197,6 +230,7 @@ def get_user_project() -> dict:
 def get_post_url(dataset_id: str,
                  file_size: int,
                  file_path: str):
+
     request_url = os.path.join(get_main_url(), "api", "dataset", "upload")
 
     response = request_executor("post",
@@ -213,7 +247,7 @@ def delete_dataset(dataset_id: str):
 
     response = request_executor("delete",
                                 url=request_url,
-                                json={"dataset_id": dataset_id})
+                                params={"dataset_id": dataset_id})
 
     return response
 
@@ -252,29 +286,15 @@ def get_get_url(dataset_id: str,
     return json.loads(response.content)
 
 
-def get_gpu_count():
-    request_url = os.path.join(get_main_url(), "api", "pricing", "plan", "train", "gpu-count")
-
-    project_name = get_config()["project"]["name"]
-
-    response = request_executor("get",
-                                url=request_url,
-                                params={"project_name": project_name})
-
-    return json.loads(response.content)
-
-
 def project_image_upload_url(tar_size: int,
                              version: int,
-                             tar_name: int):
-    request_url = os.path.join(get_main_url(), "api", "project", "image")
+                             tar_name: str):
 
-    project_name = get_config()["project"]["name"]
+    request_url = os.path.join(get_main_url(), "api", "project", "upload", "version")
 
     response = request_executor("post",
                                 url=request_url,
-                                json={"project_name": project_name,
-                                      "tarball_size": tar_size,
+                                json={"tarball_size": tar_size,
                                       "version": version,
                                       "tar_name": tar_name})
 
@@ -288,6 +308,14 @@ def get_versions():
                                 url=request_url)
 
     return json.loads(response.content)
+
+
+def delete_version(version: int):
+    request_url = os.path.join(get_main_url(), "api", "project", "get", "image", "url")
+
+    request_executor("delete",
+                     url=request_url,
+                     params={"version": version})
 
 
 def delete_all_images():
@@ -316,15 +344,3 @@ def request_executor(req_type: str, **kwargs):
         raise UnknownRequest("Options are post, patch, get, put, delete")
 
     return response
-
-
-class AuthenticatedUser:
-    @property
-    def api_key(self):
-        load_dotenv()
-        return os.getenv("API_KEY")
-
-    @property
-    def project_id(self):
-        load_dotenv()
-        return os.getenv("PROJECT_ID")

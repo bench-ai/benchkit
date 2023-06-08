@@ -1,4 +1,6 @@
 import json
+from datetime import datetime
+from dateutil import tz
 from dateutil import parser
 from pathlib import Path
 
@@ -16,13 +18,10 @@ def get_config() -> dict:
     return config
 
 
-# def get_credentials() -> tuple[str, str]:
-#     return get_config()["user_credentials"]["username"], get_config()["user_credentials"]["password"]
-
-
 def get_main_url() -> str:
     return "http://localhost:8000"
     # return "https://api.bench-ai.com"
+
 
 
 def set_config(new_config: dict):
@@ -30,8 +29,26 @@ def set_config(new_config: dict):
     old_config.update(new_config)
 
     with open(settings_path, "w") as file:
-        json.dump(old_config, file)
+        json.dump(old_config, file, indent=4)
 
 
 def convert_iso_time(iso_time_str: str):
     return parser.parse(iso_time_str)
+
+
+def convert_timestamp(ts: str):
+
+    dt = datetime.strptime(ts, '%Y-%m-%dT%H:%M:%S.%fZ')
+    from_zone = tz.tzutc()
+    to_zone = tz.tzlocal()
+
+    dt = dt.replace(tzinfo=from_zone)
+    dt_local = dt.astimezone(to_zone)
+
+    local_time = dt_local.strftime('%Y-%m-%d %I:%M:%S %p')
+
+    return local_time
+
+
+
+

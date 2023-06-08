@@ -1,34 +1,13 @@
 import argparse
-import os
-
-from BenchKit.Data.Helpers import update_dataset_config, create_dataset_zips, test_dataloading, run_upload
-from BenchKit.Miscellaneous.Settings import get_config, set_config
-from BenchKit.Miscellaneous.BenchKit import set_project, load_project
+from BenchKit.Data.Helpers import create_dataset_zips, test_dataloading, run_upload
 from Datasets.ProjectDatasets import main
-from BenchKit.Miscellaneous.User import delete_dataset, delete_all_images
+from BenchKit.Miscellaneous.User import delete_all_images
 from BenchKit.Miscellaneous.Dockerize import build_docker_image, save_image_tarball, upload_tarball
-import shutil
 from colorama import Fore, Style
 
 
 def create_datasets():
     return main()
-
-
-def clear():
-    if os.path.isdir("./ProjectDatasets"):
-        shutil.rmtree("./ProjectDatasets")
-
-
-def reset_dataset():
-    config = get_config()
-    datasets = config["datasets"]
-    for i in datasets:
-        d_id = i["info"]["id"]
-        delete_dataset(d_id)
-
-    clear()
-    update_dataset_config()
 
 
 def reset_docker_code():
@@ -40,11 +19,10 @@ def cli():
 
     parser.add_argument("action",
                         nargs='?',
-                        choices=["migratedata", "reset", "migratecode"])
+                        choices=["migrate-data", "reset", "migrate-code"])
 
     parser.add_argument("input_value",
                         nargs='?',
-                        type=int,
                         default=None)
 
     parser.add_argument("--fp",
@@ -94,43 +72,18 @@ def cli():
 
     args = parser.parse_args()
 
-    if args.action == "reset":
+    if args.action == "migrate-data":
 
-        print(Fore.RED + "WARNING this could reset your entire project. "
-                         "Everything including: all datasets, project versions, graphs, and more, will be permanently "
-                         "erased!" + Style.RESET_ALL)
-
-        answer = input("Do you wish to Proceed([[y]/n)? ").lower()
-
-        option_list = [
-            (args.rd, reset_dataset),
-            (args.rc, reset_docker_code)
-        ]
-
-        argument_list, function_list = zip(*option_list)
-
-        if answer.startswith("y"):
-
-            if argument_list == ([False] * len(option_list)):
-
-                for func in function_list:
-                    func()
-            else:
-                for argument, func in option_list:
-                    if argument:
-                        func()
-
-            project_name = get_config()["project"]["name"]
-            user_creds = get_config()["user_credentials"]
-            set_config({"user_credentials": user_creds})
-            load_project(project_name)
-
-    if args.action == "migratedata":
-
-        arg_list = main()
+        arg_list = []
 
         if args.input_value is not None:
-            arg_list = [arg_list[args.input_value]]
+            for list_arg in create_datasets():
+                if list_arg[2] == args.input_value:
+                    arg_list = [list_arg]
+            if not arg_list:
+                raise ValueError(f"No such dataset named {args.input_value}")
+        else:
+            arg_list = create_datasets()
 
         for input_args in arg_list:
 
@@ -150,14 +103,10 @@ def cli():
             if args.up:
                 run_upload(name)
 
-    if args.action == "migratecode":
-        arg_dict = {
-            "docker_image_path": args.fp,
-            "version": args.dv,
-        }
+    elif args.action == "migrate-code":
 
         print(Fore.RED + "Building Image" + Style.RESET_ALL)
-        tarball, image = build_docker_image(**arg_dict)
+        tarball, image = build_docker_image(version=args.input_value)
         print(Fore.GREEN + "built image" + Style.RESET_ALL)
 
         print(Fore.RED + "Creating Tarball" + Style.RESET_ALL)
@@ -166,7 +115,7 @@ def cli():
         print(Fore.GREEN + "Completed Tarball creation" + Style.RESET_ALL)
 
         print(Fore.RED + "Starting Image Upload " + Style.RESET_ALL)
-        upload_tarball(tarball, version=arg_dict["version"])
+        upload_tarball(tarball, version=args.input_value)
         print(Fore.GREEN + "Completed Image Upload" + Style.RESET_ALL)
 
 
