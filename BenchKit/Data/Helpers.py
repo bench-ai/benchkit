@@ -276,16 +276,16 @@ def save_file_and_label(dataset: ProcessorDataset,
 def save_label_data(dataset: ProcessorDataset,
                     ds_name: str):
     # needs to be seriously fixed
-    from BenchKit.Miscellaneous.Settings import get_config
+    # from BenchKit.Miscellaneous.Settings import get_config
     cwd = os.getcwd()
     save_folder = os.path.join(cwd, "ProjectDatasets", ds_name)
-    config = get_config()
+    # config = get_config()
 
-    ds_list: list = config["datasets"]
-    ds_list.append({
-        "name": ds_name,
-        "path": save_folder
-    })
+    # ds_list: list = config["datasets"]
+    # ds_list.append({
+    #     "name": ds_name,
+    #     "path": save_folder
+    # })
 
     if os.path.isdir(save_folder):
         raise UploadError("Folder already exists")
@@ -334,7 +334,7 @@ def save_label_data(dataset: ProcessorDataset,
 
     shutil.rmtree(folder_path)
 
-    return ds_list
+    # return ds_list
 
 
 def get_dir_size(path) -> int:

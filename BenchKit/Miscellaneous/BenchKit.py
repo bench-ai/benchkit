@@ -7,12 +7,12 @@ import shutil
 import requests
 from BenchKit.NeuralNetworks.Helpers import create_model_dir
 from BenchKit.Train.Helpers import write_script
-from .Settings import set_config, convert_timestamp
+from .Settings import convert_timestamp
 from .Verbose import verbose_logo
 import argparse
 import pandas as pd
 from .User import get_user_project, get_dataset_list, get_versions, get_checkpoint_url, test_login, \
-    list_all_checkpoints, delete_checkpoints, delete_dataset
+    list_all_checkpoints, delete_checkpoints, delete_dataset, delete_version
 from tabulate import tabulate
 
 
@@ -20,19 +20,7 @@ def create_dataset():
     from BenchKit.Data.Helpers import create_dataset_dir
     create_dataset_dir()
 
-
-def set_settings():
-    with open("Config.json", "r") as file:
-        x = json.load(file)
-
-    save_path = Path(__file__).resolve().parent / "Config.json"
-    with open(save_path, "w") as file:
-        json.dump(x, file, indent=4)
-
-
 def logout():
-    write_config_template(lgn=False)
-    set_settings()
     cred_path = Path(__file__).resolve().parent / "credentials.json"
     if os.path.exists(cred_path):
         os.remove(cred_path)
@@ -43,36 +31,13 @@ def login_manual(project_id: str, api_key: str):
 
     with open(cred_path, "w") as file:
         json.dump({"project_id": project_id,
-                   "api_key": api_key}, file, indent=4)
+                   "api_key": api_key}, file)
 
     try:
         test_login()
-        write_config()
     except RuntimeError:
         logout()
         raise ValueError("Credentials invalid")
-
-
-def write_config_template(project_id=None, api_key=None, lgn=True):
-    template_path = Path(__file__).resolve().parent / "configtemplate.txt"
-    with open(template_path, "r") as f:
-        with open("Config.json", "w") as file:
-            line = f.readline()
-            while line:
-                file.write(line)
-                line = f.readline()
-
-    set_settings()
-    if lgn:
-        login_manual(project_id, api_key)
-
-
-def write_config():
-    cfg = Path(__file__).resolve().parent / "Config.json"
-    with open(cfg, "r") as f:
-        cfg = json.load(f)
-        with open("Config.json", "w") as file:
-            json.dump(cfg, file, indent=4)
 
 
 def write_manager():
@@ -85,39 +50,30 @@ def write_manager():
                 line = f.readline()
 
 
-def set_project():
-    data = get_user_project()
-    set_config({"project": data})
-    write_config()
-
-
-def update_dataset_config():
-    ds_list: list = get_dataset_list()
-    set_config({"datasets": ds_list})
-    write_config()
-
-
-def update_code_version_config():
-    version_list = get_versions()
-    set_config({"code_versions": version_list})
-    write_config()
-
-
 def print_version():
     verbose_logo("V.0.0.50 ALPHA")
 
 
 def load_project(project_id: str, api_key: str):
-    write_config_template(project_id, api_key)
-    set_project()
-    update_dataset_config()
-    update_code_version_config()
+    login_manual(project_id, api_key)
 
 
 def show_versions():
-    df = pd.DataFrame(data=get_user_project())
-    print(tabulate(df, headers='keys', tablefmt='psql'))
+    version_dict = get_versions()
+    if not version_dict:
+        raise ValueError("No versions have been uploaded")
 
+    df = pd.DataFrame(data=version_dict)
+    df = df.drop(columns=["project_id", "id"])
+    print(tabulate(df, headers='keys', tablefmt='psql', showindex=False))
+
+    return df
+
+
+def del_versions():
+    show_versions()
+    version_number = int(input("Enter the number of the version you wish to delete: "))
+    delete_version(version_number)
 
 
 def show_project():
@@ -207,10 +163,10 @@ def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("action",
-                        choices=["start-project", "logout", "set-settings",
+                        choices=["start-project", "logout",
                                  "get-check", "del-check", "show-check",
                                  "show-ds", "del-ds", "project-info",
-                                 "show-vs"],
+                                 "show-vs", "del-vs"],
                         nargs="?",
                         default=None)
 
@@ -239,9 +195,6 @@ def main():
     if args.action == "logout":
         logout()
 
-    if args.action == "set-settings":
-        set_settings()
-
     if args.action == "get-check":
         get_checkpoint()
 
@@ -259,6 +212,9 @@ def main():
 
     if args.action == "project-info":
         show_project()
+
+    if args.action == "del-vs":
+        del_versions()
 
     if args.action == "show-vs":
         show_versions()

@@ -3,7 +3,7 @@ import os
 from functools import wraps
 from pathlib import Path
 import requests
-from .Settings import get_main_url, get_config, convert_iso_time
+from .Settings import get_main_url, convert_iso_time
 
 
 class AuthenticatedUser:
@@ -166,7 +166,8 @@ def update_server(instance_id: str,
                   progress: int | None = None,
                   current_step: int | None = None,
                   last_message: str | None = None):
-    request_url = os.path.join(get_main_url(), "api", "tracking", "server", "launch")
+
+    request_url = os.path.join(get_main_url(), "api", "tracking", "update", "progress")
 
     data_dict = {"instance_id": instance_id}
 
@@ -276,12 +277,16 @@ def get_dataset(dataset_id: str):
 
 def get_get_url(dataset_id: str,
                 file_path: str):
+
     request_url = os.path.join(get_main_url(), "api", "dataset", "upload")
+
+    instance_id = os.getenv("INSTANCE_ID")
 
     response = request_executor("get",
                                 url=request_url,
                                 params={"dataset_id": dataset_id,
-                                        "file_key": file_path})
+                                        "file_key": file_path,
+                                        "instance_id": instance_id})
 
     return json.loads(response.content)
 
@@ -316,16 +321,6 @@ def delete_version(version: int):
     request_executor("delete",
                      url=request_url,
                      params={"version": version})
-
-
-def delete_all_images():
-    request_url = os.path.join(get_main_url(), "api", "project", "delete", "all", "images")
-
-    project_name = get_config()["project"]["name"]
-
-    request_executor("delete",
-                     url=request_url,
-                     json={"project_name": project_name})
 
 
 @authorize_response

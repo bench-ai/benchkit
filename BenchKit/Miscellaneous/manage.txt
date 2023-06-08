@@ -1,17 +1,12 @@
 import argparse
 from BenchKit.Data.Helpers import create_dataset_zips, test_dataloading, run_upload
 from Datasets.ProjectDatasets import main
-from BenchKit.Miscellaneous.User import delete_all_images
 from BenchKit.Miscellaneous.Dockerize import build_docker_image, save_image_tarball, upload_tarball
 from colorama import Fore, Style
 
 
 def create_datasets():
     return main()
-
-
-def reset_docker_code():
-    delete_all_images()
 
 
 def cli():
@@ -24,36 +19,6 @@ def cli():
     parser.add_argument("input_value",
                         nargs='?',
                         default=None)
-
-    parser.add_argument("--fp",
-                        type=str,
-                        help="Path to Dockerfile",
-                        required=False)
-
-    parser.add_argument("--im",
-                        type=str,
-                        help="name of the image you wish to use",
-                        required=False)
-
-    parser.add_argument("--dv",
-                        type=int,
-                        help="the version of the image you wish to use",
-                        required=False)
-
-    parser.add_argument("--t",
-                        type=str,
-                        help="the tag to be used on this image",
-                        required=False)
-
-    parser.add_argument("--rd",
-                        help="reset dataset",
-                        action="store_true",
-                        required=False)
-
-    parser.add_argument("--rc",
-                        help="reset docker_code",
-                        action="store_true",
-                        required=False)
 
     parser.add_argument("--zip",
                         help="create zip files",
