@@ -3,8 +3,9 @@ from dateutil import tz
 from dateutil import parser
 
 def get_main_url() -> str:
-    return "http://localhost:8000"
+    # return "http://localhost:8000"
     # return "https://api.bench-ai.com"
+    return "https://alpha-dev.bench-ai.com"
 
 def convert_iso_time(iso_time_str: str):
     return parser.parse(iso_time_str)
