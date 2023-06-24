@@ -11,14 +11,16 @@ pip install torch==2.0.0+cu118 torchvision==0.15.1+cu118 torchaudio==2.0.1 --ind
 # Install requirements
 pip install -r dependencies.txt
 
+pip freeze
+
 # Start project using bench-kit
 bench-kit start-project "$project_id" "$api_key"
 
 if [ "$gpu_count" -gt 1 ]; then
     echo "GPU count is greater than 1."
-    accelerate launch --dynamo_backend no --num_processes "$gpu_count" --num_machines 1 --mixed_precision no TrainScript.py
+    accelerate launch --dynamo_backend no --num_processes "$gpu_count" --num_machines 1 --mixed_precision no --multi_gpu TrainScript.py
 
 else
     echo "GPU count is not greater than 1."
-    accelerate launch --dynamo_backend no --num_processes "$gpu_count" --num_machines 1 --mixed_precision no --multi_gpu TrainScript.py
+    accelerate launch --dynamo_backend no --num_processes "$gpu_count" --num_machines 1 --mixed_precision no TrainScript.py
 fi

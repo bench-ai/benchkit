@@ -47,8 +47,6 @@ def authorize_response(func):
         header = {'project-id': auth.project_id,
                   'api-key': auth.api_key}
 
-        print(header)
-
         kwargs.update({"headers": header})
         response: requests.Response = func(*args, **kwargs)
         return response
