@@ -26,7 +26,7 @@ COPY ./Models /Bench-Project/Models
 COPY ./TrainScript.py /Bench-Project/
 COPY ./manage.py /Bench-Project/
 COPY ./Config.json /Bench-Project/
-COPY ./requirements.txt /Bench-Project/
+COPY ./dependencies.txt /Bench-Project/
 COPY ./entrypoint.sh /Bench-Project/
 
 WORKDIR /Bench-Project
