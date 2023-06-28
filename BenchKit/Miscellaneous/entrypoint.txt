@@ -1,0 +1,31 @@
+#!/bin/sh
+
+# Assign values to variables from environment variables
+gpu_count="$GPU_COUNT"
+project_id="$PROJECT_ID"
+api_key="$API_KEY"
+
+pip install torch==2.0.0+cu118 torchvision==0.15.1+cu118 torchaudio==2.0.1 --index-url https://download.pytorch.org/whl/cu118
+echo "Installed Pytorch"
+
+pip install git+https://github.com/Bench-ai/BenchKit.git@api-key
+echo "Installed Bench-kit"
+
+# Install requirements
+pip install -r dependencies.txt
+
+pip freeze
+
+# Start project using bench-kit
+bench-kit start-project "$project_id" "$api_key"
+
+echo "Authenticated"
+
+if [ "$gpu_count" -gt 1 ]; then
+    echo "GPU count is greater than 1."
+    accelerate launch --dynamo_backend no --num_processes "$gpu_count" --num_machines 1 --mixed_precision no --multi_gpu TrainScript.py
+
+else
+    echo "GPU count is not greater than 1."
+    accelerate launch --dynamo_backend no --num_processes "$gpu_count" --num_machines 1 --mixed_precision no TrainScript.py
+fi
