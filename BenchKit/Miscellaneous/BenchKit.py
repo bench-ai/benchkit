@@ -12,13 +12,17 @@ from .Verbose import verbose_logo
 import argparse
 import pandas as pd
 from .User import get_user_project, get_dataset_list, get_versions, get_checkpoint_url, test_login, \
-    list_all_checkpoints, delete_checkpoints, delete_dataset, delete_version
+    list_all_checkpoints, delete_checkpoints, delete_dataset, delete_version, pull_project_code
 from tabulate import tabulate
+from tqdm import tqdm
+from BenchKit.Miscellaneous.MakeTar import extract_tar
+
 
 
 def create_dataset():
     from BenchKit.Data.Helpers import create_dataset_dir
     create_dataset_dir()
+
 
 def logout():
     cred_path = Path(__file__).resolve().parent / "credentials.json"
@@ -64,7 +68,7 @@ def show_versions():
         raise ValueError("No versions have been uploaded")
 
     df = pd.DataFrame(data=version_dict)
-    df = df.drop(columns=["project_id", "id"])
+    df = df.drop(columns=["project_id"])
     print(tabulate(df, headers='keys', tablefmt='psql', showindex=False))
 
     return df
@@ -159,6 +163,19 @@ def get_checkpoint():
     os.remove(f"{row['checkpoint_name']}.tar")
 
 
+def pull_version(version: int):
+    code_dict = pull_project_code(version)
+
+    for item in tqdm(code_dict.items()):
+        k, v = item
+        mem_zip = requests.get(v)
+        with open(f"{k}.tar.gz", 'wb') as f:
+            f.write(mem_zip.content)
+
+        extract_tar(f"{k}.tar.gz", ".")
+        os.remove(f"{k}.tar.gz")
+
+
 def main():
     parser = argparse.ArgumentParser()
 
@@ -166,7 +183,7 @@ def main():
                         choices=["start-project", "logout",
                                  "get-check", "del-check", "show-check",
                                  "show-ds", "del-ds", "project-info",
-                                 "show-vs", "del-vs"],
+                                 "show-vs", "del-vs", "pull-vs"],
                         nargs="?",
                         default=None)
 
@@ -218,6 +235,13 @@ def main():
 
     if args.action == "show-vs":
         show_versions()
+
+    if args.action == "pull-vs":
+
+        if not args.input_value:
+            raise ValueError("Project version was not provided")
+
+        pull_version(args.input_value)
 
     if args.action == "start-project":
 

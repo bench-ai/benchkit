@@ -21,3 +21,5 @@ requirements.txt
 TrainScript.py
 Bench-My_Test_Project_2-V1-latest.tar
 credentials.json
+tartest.py
+dependency.txt

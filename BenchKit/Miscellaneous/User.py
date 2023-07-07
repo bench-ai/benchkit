@@ -164,7 +164,6 @@ def update_server(instance_id: str,
                   progress: int | None = None,
                   current_step: int | None = None,
                   last_message: str | None = None):
-
     request_url = os.path.join(get_main_url(), "api", "tracking", "update", "progress")
 
     data_dict = {"instance_id": instance_id}
@@ -206,7 +205,6 @@ def get_dataset_list():
 
 def patch_dataset_list(dataset_id: str,
                        length: int):
-
     request_url = os.path.join(get_main_url(), "api", "dataset", "project", "list")
 
     request_executor("patch",
@@ -229,7 +227,6 @@ def get_user_project() -> dict:
 def get_post_url(dataset_id: str,
                  file_size: int,
                  file_path: str):
-
     request_url = os.path.join(get_main_url(), "api", "dataset", "upload")
 
     response = request_executor("post",
@@ -275,7 +272,6 @@ def get_dataset(dataset_id: str):
 
 def get_get_url(dataset_id: str,
                 file_path: str):
-
     request_url = os.path.join(get_main_url(), "api", "dataset", "upload")
 
     instance_id = os.getenv("INSTANCE_ID")
@@ -289,23 +285,58 @@ def get_get_url(dataset_id: str,
     return json.loads(response.content)
 
 
-def project_image_upload_url(tar_size: int,
-                             version: int,
-                             tar_name: str):
+def upload_project_code(dependency_tar_size: int,
+                        dependency_name: str,
+                        train_script_tar_size: int,
+                        train_script_name: str,
+                        model_tar_size: int,
+                        model_name: str,
+                        dataloader_tar_size: int,
+                        dataloader_name: str,
+                        version: int):
 
-    request_url = os.path.join(get_main_url(), "api", "project", "upload", "version")
+    request_url = os.path.join(get_main_url(),
+                               "api",
+                               "project",
+                               "upload",
+                               "code")
 
     response = request_executor("post",
                                 url=request_url,
-                                json={"tarball_size": tar_size,
-                                      "version": version,
-                                      "tar_name": tar_name})
+                                json={"dependency_tar_size": dependency_tar_size,
+                                      "dependency_name": dependency_name,
+                                      "train_script_tar_size": train_script_tar_size,
+                                      "train_script_name": train_script_name,
+                                      "model_tar_size": model_tar_size,
+                                      "model_name": model_name,
+                                      "dataloader_tar_size": dataloader_tar_size,
+                                      "dataloader_name": dataloader_name,
+                                      "version": version})
+
+    return json.loads(response.content)
+
+
+def pull_project_code(version: int):
+
+    request_url = os.path.join(get_main_url(),
+                               "api",
+                               "project",
+                               "get",
+                               "code")
+
+    response = request_executor("get",
+                                url=request_url,
+                                params={"version": version})
 
     return json.loads(response.content)
 
 
 def get_versions():
-    request_url = os.path.join(get_main_url(), "api", "project", "unique", "all", "images")
+    request_url = os.path.join(get_main_url(),
+                               "api",
+                               "project",
+                               "b-k",
+                               "version")
 
     response = request_executor("get",
                                 url=request_url)
@@ -314,7 +345,11 @@ def get_versions():
 
 
 def delete_version(version: int):
-    request_url = os.path.join(get_main_url(), "api", "project", "get", "image", "url")
+    request_url = os.path.join(get_main_url(),
+                               "api",
+                               "project",
+                               "b-k",
+                               "version")
 
     request_executor("delete",
                      url=request_url,
