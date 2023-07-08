@@ -1,12 +1,62 @@
 import argparse
+import os
+
 from BenchKit.Data.Helpers import create_dataset_zips, test_dataloading, run_upload
 from Datasets.ProjectDatasets import main
-from BenchKit.Miscellaneous.Dockerize import build_docker_image, save_image_tarball, upload_tarball
+from BenchKit.Miscellaneous.MakeTar import generate_tar
+from BenchKit.Miscellaneous.User import upload_project_code
+from BenchKit.Data.Helpers import upload_file
 from colorama import Fore, Style
+from pathlib import Path
+from tqdm import tqdm
+
 
 
 def create_datasets():
     return main()
+
+
+def migrate_code(version: int):
+    print(Fore.RED + "Starting Zipping process" + Style.RESET_ALL)
+    dep_path = Path(__file__).resolve().parent / "dependency.txt"
+    dep_tar = generate_tar("dependency", str(dep_path))
+
+    mod_path = Path(__file__).resolve().parent / "Models"
+    mod_tar = generate_tar("models", str(mod_path))
+
+    dat_path = Path(__file__).resolve().parent / "Datasets"
+    dat_tar = generate_tar("datasets", str(dat_path))
+
+    ts_path = Path(__file__).resolve().parent / "TrainScript.py"
+    ts_tar = generate_tar("train-script", str(ts_path))
+
+    print(Fore.GREEN + "Completed Zipping process" + Style.RESET_ALL)
+
+    data_dict: dict = upload_project_code(os.path.getsize(dep_tar),
+                                          dep_tar,
+                                          os.path.getsize(ts_tar),
+                                          ts_tar,
+                                          os.path.getsize(mod_tar),
+                                          mod_tar,
+                                          os.path.getsize(dat_tar),
+                                          dat_tar,
+                                          version)
+
+    print(Fore.RED + "Starting Upload process" + Style.RESET_ALL)
+
+    for set_dict in tqdm(data_dict.items(), colour="blue"):
+        _, v = set_dict
+        upload_file(v["url"],
+                    os.path.split(v["fields"]["key"])[-1],
+                    os.path.split(v["fields"]["key"])[-1],
+                    v["fields"])
+
+    print(Fore.GREEN + "Completed Upload process" + Style.RESET_ALL)
+
+    os.remove(dep_tar)
+    os.remove(mod_tar)
+    os.remove(dat_tar)
+    os.remove(ts_tar)
 
 
 def cli():
@@ -70,18 +120,12 @@ def cli():
 
     elif args.action == "migrate-code":
 
-        print(Fore.RED + "Building Image" + Style.RESET_ALL)
-        tarball, image = build_docker_image(version=args.input_value)
-        print(Fore.GREEN + "built image" + Style.RESET_ALL)
+        print(Fore.RED + "Starting Code Migration" + Style.RESET_ALL)
 
-        print(Fore.RED + "Creating Tarball" + Style.RESET_ALL)
-        save_image_tarball(tarball,
-                           image)
-        print(Fore.GREEN + "Completed Tarball creation" + Style.RESET_ALL)
+        if not args.input_value:
+            args.input_value = 1
 
-        print(Fore.RED + "Starting Image Upload " + Style.RESET_ALL)
-        upload_tarball(tarball, version=args.input_value)
-        print(Fore.GREEN + "Completed Image Upload" + Style.RESET_ALL)
+        migrate_code(args.input_value)
 
 
 if __name__ == '__main__':
