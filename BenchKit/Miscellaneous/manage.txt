@@ -18,7 +18,7 @@ def create_datasets():
 
 def migrate_code(version: int):
     print(Fore.RED + "Starting Zipping process" + Style.RESET_ALL)
-    dep_path = Path(__file__).resolve().parent / "dependency.txt"
+    dep_path = Path(__file__).resolve().parent / "dependencies.txt"
     dep_tar = generate_tar("dependency", str(dep_path))
 
     mod_path = Path(__file__).resolve().parent / "Models"
