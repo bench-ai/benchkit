@@ -4,6 +4,8 @@ from functools import wraps
 from pathlib import Path
 import requests
 from .Settings import get_main_url, convert_iso_time
+from .Verbose import get_version
+import torch
 
 
 class AuthenticatedUser:
@@ -311,7 +313,10 @@ def upload_project_code(dependency_tar_size: int,
                                       "model_name": model_name,
                                       "dataloader_tar_size": dataloader_tar_size,
                                       "dataloader_name": dataloader_name,
-                                      "version": version})
+                                      "version": version,
+                                      "framework": "PYT",
+                                      "benchkit_version": get_version(),
+                                      "framework_version": torch.__version__})
 
     return json.loads(response.content)
 
