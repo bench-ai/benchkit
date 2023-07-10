@@ -12,7 +12,7 @@ from .Verbose import verbose_logo, get_version
 import argparse
 import pandas as pd
 from .User import get_user_project, get_dataset_list, get_versions, get_checkpoint_url, test_login, \
-    list_all_checkpoints, delete_checkpoints, delete_dataset, delete_version, pull_project_code
+    list_all_checkpoints, delete_checkpoints, delete_dataset, delete_version, pull_project_code, kill_server
 from tabulate import tabulate
 from tqdm import tqdm
 from BenchKit.Miscellaneous.MakeTar import extract_tar
@@ -59,6 +59,10 @@ def print_version():
 
 def load_project(project_id: str, api_key: str):
     login_manual(project_id, api_key)
+
+
+def gracefully_stop_server():
+    kill_server()
 
 
 def show_versions():
@@ -182,7 +186,8 @@ def main():
                         choices=["start-project", "logout",
                                  "get-check", "del-check", "show-check",
                                  "show-ds", "del-ds", "project-info",
-                                 "show-vs", "del-vs", "pull-vs"],
+                                 "show-vs", "del-vs", "pull-vs",
+                                 "stop-svr"],
                         nargs="?",
                         default=None)
 
@@ -234,6 +239,9 @@ def main():
 
     if args.action == "show-vs":
         show_versions()
+
+    if args.action == "stop-svr":
+        gracefully_stop_server()
 
     if args.action == "pull-vs":
 

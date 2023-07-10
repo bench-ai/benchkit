@@ -287,6 +287,19 @@ def get_get_url(dataset_id: str,
     return json.loads(response.content)
 
 
+def kill_server():
+
+    request_url = os.path.join(get_main_url(), "api", "tracking", "server", "auto", "stop")
+
+    instance_id = os.getenv("INSTANCE_ID")
+
+    response = request_executor("delete",
+                                url=request_url,
+                                params={"instance_id": instance_id})
+
+    return json.loads(response.content)
+
+
 def upload_project_code(dependency_tar_size: int,
                         dependency_name: str,
                         train_script_tar_size: int,
