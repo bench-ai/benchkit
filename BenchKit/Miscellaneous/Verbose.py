@@ -3,6 +3,10 @@ from colorama import Style
 from pathlib import Path
 
 
+def get_version():
+    return "0.0.60"
+
+
 def verbose_logo(version: str):
     package_dir = Path(__file__).resolve().parent / "bench_ascii_logo.txt"
 
