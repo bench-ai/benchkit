@@ -1,6 +1,7 @@
 import json
 import os
 import tarfile
+import time
 from pathlib import Path
 import gzip
 import shutil
@@ -12,7 +13,8 @@ from .Verbose import verbose_logo, get_version
 import argparse
 import pandas as pd
 from .User import get_user_project, get_dataset_list, get_versions, get_checkpoint_url, test_login, \
-    list_all_checkpoints, delete_checkpoints, delete_dataset, delete_version, pull_project_code, kill_server
+    list_all_checkpoints, delete_checkpoints, delete_dataset, delete_version, pull_project_code, kill_server, \
+    get_experiments, get_logs
 from tabulate import tabulate
 from tqdm import tqdm
 from BenchKit.Miscellaneous.MakeTar import extract_tar
@@ -179,6 +181,117 @@ def pull_version(version: int):
         os.remove(f"{k}.tar.gz")
 
 
+def show_experiments(version=None,
+                     state=None):
+    ext = False
+    page = 1
+    page_dict = {
+        1: 0
+    }
+    while not ext:
+
+        experiment_dict = get_experiments(page,
+                                          version,
+                                          state)
+
+        server_dict = experiment_dict["servers"]
+        next_page = experiment_dict["next_page"]
+
+        if not server_dict:
+            raise ValueError(f"No Experiments have been run for version: {version} and state: {state}")
+
+        df = pd.DataFrame(data=server_dict)
+
+        df.index = df.index + page_dict[page]
+
+        page_dict[next_page] = len(df) + page_dict[page]
+
+        instance_series = df["instance_id"]
+
+        df = df.drop(columns=["instance_id",
+                              "image",
+                              "killed_timestamp",
+                              "creation_timestamp"])
+
+        print(tabulate(df, headers='keys', tablefmt='psql', showindex=True))
+
+        n_valid: bool = False
+        p_valid: bool = False
+
+        if next_page:
+            print(f"The next page is {next_page}. ", end='')
+            n_valid = True
+
+        if page != 1:
+            print(f"The previous page is {page - 1}", end='')
+            p_valid = True
+
+        print("\n")
+
+        pr_str = ""
+
+        if n_valid:
+            pr_str += "Type 'n' to move to the next page. "
+
+        if p_valid:
+            pr_str += "Type 'p' to move to the previous page. "
+
+        if n_valid or p_valid:
+
+            pr_str += "Or enter the number of the Experiment logs you wish to see. "
+
+            str_inp = input(pr_str[:-2] + ": ")
+
+            if str_inp.lower() == "n" and n_valid:
+                page += 1
+            elif str_inp.lower() == "p" and p_valid:
+                page -= 1
+            else:
+
+                try:
+                    num = int(str_inp)
+                    show_logs(instance_series[num])
+
+                except (TypeError, ValueError):
+                    pass
+
+                ext = True
+        else:
+            ext = True
+
+
+def show_logs(instance_id: str):
+    ext = False
+    page = 1
+    current_timestamp = ""
+    file_line = 0
+
+    while not ext:
+        log_dict = get_logs(page=page,
+                            instance_id=instance_id)
+
+        if current_timestamp == log_dict["update_timestamp"]:
+
+            if log_dict["next_page"]:
+                page = log_dict["next_page"]
+                file_line = 0
+            else:
+                if not log_dict["state"] == "SRU":
+                    ext = True
+                else:
+                    time.sleep(5)
+        else:
+            current_timestamp = log_dict["update_timestamp"]
+            mem_file = requests.get(log_dict["log_url"])
+            content = mem_file.text
+            lines = content.splitlines()
+
+            for idx, line in enumerate(lines):
+                if idx == file_line:
+                    print(line)
+                    file_line += 1
+
+
 def main():
     parser = argparse.ArgumentParser()
 
@@ -187,7 +300,7 @@ def main():
                                  "get-check", "del-check", "show-check",
                                  "show-ds", "del-ds", "project-info",
                                  "show-vs", "del-vs", "pull-vs",
-                                 "stop-svr"],
+                                 "stop-svr", "show-ex"],
                         nargs="?",
                         default=None)
 
@@ -208,9 +321,19 @@ def main():
                         action='store_true',
                         required=False)
 
+    parser.add_argument("-s",
+                        "--state",
+                        type=str,
+                        required=False)
+
+    parser.add_argument("-cv",
+                        "--code_version",
+                        type=int,
+                        required=False)
+
     args = parser.parse_args()
 
-    if args.version:
+    if args.version and not args.action:
         print_version()
 
     if args.action == "logout":
@@ -263,6 +386,10 @@ def main():
         create_dataset()
         create_model_dir()
         write_script()
+
+    if args.action == "show-ex":
+        show_experiments(args.code_version,
+                         args.state)
 
 
 if __name__ == '__main__':

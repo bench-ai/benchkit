@@ -288,7 +288,6 @@ def get_get_url(dataset_id: str,
 
 
 def kill_server():
-
     request_url = os.path.join(get_main_url(), "api", "tracking", "server", "auto", "stop")
 
     instance_id = os.getenv("INSTANCE_ID")
@@ -309,7 +308,6 @@ def upload_project_code(dependency_tar_size: int,
                         dataloader_tar_size: int,
                         dataloader_name: str,
                         version: int):
-
     request_url = os.path.join(get_main_url(),
                                "api",
                                "project",
@@ -335,7 +333,6 @@ def upload_project_code(dependency_tar_size: int,
 
 
 def pull_project_code(version: int):
-
     request_url = os.path.join(get_main_url(),
                                "api",
                                "project",
@@ -372,6 +369,42 @@ def delete_version(version: int):
     request_executor("delete",
                      url=request_url,
                      params={"version": version})
+
+
+def get_experiments(page: int,
+                    version=None,
+                    state=None):
+    request_url = os.path.join(get_main_url(),
+                               "api",
+                               "tracking",
+                               "get",
+                               "experiment")
+
+    response = request_executor("get",
+                                url=request_url,
+                                params={"page": page,
+                                        "version": version,
+                                        "state": state})
+
+    return json.loads(response.content)
+
+
+def get_logs(page: int,
+             instance_id: str):
+
+    request_url = os.path.join(get_main_url(),
+                               "api",
+                               "tracking",
+                               "get",
+                               "log",
+                               "b-k")
+
+    response = request_executor("get",
+                                url=request_url,
+                                params={"page": page,
+                                        "instance_id": instance_id})
+
+    return json.loads(response.content)
 
 
 @authorize_response
