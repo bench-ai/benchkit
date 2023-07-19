@@ -1,19 +1,23 @@
+import functools
 import os.path
 from pathlib import Path
 from accelerate import Accelerator
 from BenchKit.Data.Helpers import remove_all_temps
 
 
-def data_loading(acc: Accelerator):
-    def decorator(fun):
-        def wrapper(*args, **kwargs):
-            return fun(*args, **kwargs)
+def data_loading(func):
+    """
+    A decorator to be used whenever a chunking dataloader is in use. Removes all temp dirs and free's GPU memory.
+    """
+
+    @functools.wraps(func)
+    def wrapper_timer(acc: Accelerator, *args, **kwargs):
+        value = func(acc, *args, **kwargs)
         wipe_temp(acc)
         acc.free_memory()
+        return value
 
-        return wrapper
-
-    return decorator
+    return wrapper_timer
 
 
 def wipe_temp(acc: Accelerator):
