@@ -1,6 +1,7 @@
 import json
 import os
 import pickle
+import shutil
 import uuid
 import numpy as np
 import torch
@@ -9,9 +10,15 @@ import torch
 class BaseFile:
 
     def __init__(self):
-        self.prefix = ""
-        self.file_name = ""
-        raise NotImplementedError("Init Method is required to initialize the necessary parts of the file")
+        self._prefix = ""
+        self._file_name = f"bench-{str(uuid.uuid4())}"
+
+    def reset(self):
+        self._file_name = f"bench-{str(uuid.uuid4())}"
+
+    @property
+    def file_name(self):
+        return self._file_name
 
     @classmethod
     def load(cls, *args, **kwargs):
@@ -19,16 +26,17 @@ class BaseFile:
 
     @property
     def prefix(self):
-        return self.prefix
+        return self._prefix
 
     @prefix.setter
     def prefix(self, prefix: str):
-        self.prefix = prefix
+        self._prefix = prefix
 
     @property
     def save_path(self):
+
         return os.path.join(self.prefix,
-                            self.file_name)
+                            self._file_name)
 
     def save(self, *args, **kwargs) -> tuple[str, str]:
         raise NotImplementedError("Save is required to write the file to disk")
@@ -44,18 +52,26 @@ class TextFile(BaseFile):
 
     def __init__(self,
                  line_list: list | None = None):
-
         super().__init__()
-        self.file_name = f"bench-{str(uuid.uuid4())}-text.txt"
-        self._file = open(self.save_path, "w")
-        self._line_list = line_list
+        self._file_name = super().file_name + "-text.txt"
+        self._line_list = line_list if line_list else []
 
     def save(self) -> tuple[str, str]:
-        self._file.close()
+        with open(self.save_path, "w") as file:
+            file.writelines(self._line_list)
+
         return self.file_name, "textfile"
 
+    def reset(self):
+        super().reset()
+        self._file_name = super().file_name + "-text.txt"
+        self._line_list = []
+
     def append(self, line: str):
-        self._file.write(line)
+        if not line.endswith("\n"):
+            line += "\n"
+
+        self._line_list.append(line)
 
     @classmethod
     def load(cls, save_path: str):
@@ -67,19 +83,22 @@ class TextFile(BaseFile):
     def __call__(self, idx, *args, **kwargs) -> str:
         return self._line_list[idx]
 
-
 class BooleanFile(TextFile):
 
     def __init__(self,
                  line_list: list | None = None):
-
         super().__init__(line_list=line_list)
+
 
     def append(self, line: bool):
         super().append(str(int(line)))
 
     def __call__(self, idx, *args, **kwargs) -> bool:
-        return bool(int(super()(idx)))
+        return bool(int(super().__call__(idx)))
+
+    def save(self):
+        name, _ = super().save()
+        return name, "bool"
 
 
 class NumpyFile(BaseFile):
@@ -89,43 +108,51 @@ class NumpyFile(BaseFile):
                  shape: tuple[int] | None = None):
 
         super().__init__()
-        self.enforce_shape = enforce_shape
+        self._enforce_shape = enforce_shape
 
-        file_str = f"bench-{str(uuid.uuid4())}"
+        file_str = super().file_name
         file_str += "-{}"
 
-        self.file_name = file_str.format("enforced-array.npy") if enforce_shape else file_str.format("array.npz")
+        self._file_name = file_str.format("enforced-array.npy") if enforce_shape else file_str.format("array.npz")
         self.shape = shape
 
         if enforce_shape and not shape:
             raise RuntimeError("To enforce a shape a shape must be provided")
 
+        self._arr_dict = {}
+        self._arr = None
+
+    def reset(self):
+        super().reset()
+        file_str = super().file_name
+        file_str += "-{}"
+        self._file_name = file_str.format("enforced-array.npy") if self.enforce_shape else file_str.format("array.npz")
         self.arr_dict = {}
         self.arr = None
 
     @property
     def arr_dict(self):
-        return self.arr_dict
+        return self._arr_dict
 
     @arr_dict.setter
     def arr_dict(self, arr_dict):
-        self.arr_dict = arr_dict
+        self._arr_dict = arr_dict
 
     @property
     def arr(self):
-        return self.arr
+        return self._arr
 
     @arr.setter
     def arr(self, arr):
-        self.arr = arr
+        self._arr = arr
 
     @property
     def enforce_shape(self):
-        return self.enforce_shape
+        return self._enforce_shape
 
     @enforce_shape.setter
     def enforce_shape(self, new_shape: tuple[int]):
-        self.enforce_shape = new_shape
+        self._enforce_shape = new_shape
 
     def append(self, arr):
 
@@ -151,7 +178,7 @@ class NumpyFile(BaseFile):
         if self.enforce_shape:
             return self.arr[idx]
         else:
-            return self.arr_dict[f"np-{len(idx)}"]
+            return self.arr_dict[f"np-{idx}"]
 
     @classmethod
     def load(cls,
@@ -175,35 +202,35 @@ class NumpyFile(BaseFile):
             np.save(self.save_path,
                     self.arr)
 
-            return self.save_path, "enforced_arr"
+            return self.file_name, "enforced_arr"
         else:
             np.savez(self.save_path, **self.arr_dict)
-            return self.save_path, "arr"
+            return self.file_name, "arr"
 
 
 class TorchFile(BaseFile):
 
     def __init__(self,
-                 shape: tuple[int,...]):
+                 shape: tuple[int, ...]):
 
         super().__init__()
-        self.file_name = f"bench-{str(uuid.uuid4())}-ten.pt"
+        self._file_name = super().file_name + "-ten.pt"
         self.shape = torch.Size(shape)
 
-        self.ten = None
+        self._ten = None
 
     @property
     def ten(self):
-        return self.ten
+        return self._ten
 
     @ten.setter
     def ten(self, ten: torch.Tensor):
-        self.ten = ten
+        self._ten = ten
 
     def append(self, ten: torch.Tensor):
 
         if isinstance(ten, list):
-            ten = torch.Tensor(list)
+            ten = torch.Tensor(ten)
 
         if ten.size() != self.shape:
             raise RuntimeError(f"Enforced Shape of {self.shape} does not match tensor shape {ten.size()}")
@@ -218,7 +245,7 @@ class TorchFile(BaseFile):
     def save(self):
         torch.save(self.ten, self.save_path)
 
-        return self.save_path, "ten"
+        return self.file_name, "ten"
 
     @classmethod
     def load(cls,
@@ -232,6 +259,11 @@ class TorchFile(BaseFile):
 
         return instance
 
+    def reset(self):
+        super().reset()
+        self._file_name = super().file_name + "-ten.pt"
+        self.ten = None
+
     def __call__(self, idx, *args, **kwargs):
         return self.ten[idx]
 
@@ -239,32 +271,35 @@ class TorchFile(BaseFile):
 class JsonFile(BaseFile):
 
     def __init__(self):
-
         super().__init__()
-        self.json_list = []
-        self.file_name = f"bench-{str(uuid.uuid4())}-json.json"
+        self._json_list = []
+        self._file_name = super().file_name + "-json.json"
 
     def append(self, app):
         self.json_list.append(app)
 
+    def reset(self):
+        super().reset()
+        self.json_list = []
+        self._file_name = super().file_name + "-json.json"
+
     @property
     def json_list(self):
-        return self.json_list
+        return self._json_list
 
     @json_list.setter
     def json_list(self, j_list: list):
-        self.json_list = j_list
+        self._json_list = j_list
 
     def save(self):
         with open(self.save_path, "w") as f:
             json.dump(self.json_list, f)
 
-        return self.save_path, "json"
+        return self.file_name, "json"
 
     @classmethod
     def load(cls,
              save_path: str):
-
         with open(save_path, "r") as file:
             j_list = json.load(file)
 
@@ -282,16 +317,21 @@ class NumericFile(BaseFile):
 
     def __init__(self):
         super().__init__()
-        self.file_name = f"bench-{str(uuid.uuid4())}-json.json"
-        self.numeric_list = []
+        self._file_name = super().file_name + "-num.pkl"
+        self._numeric_list = []
 
     @property
     def numeric_list(self):
-        return self.numeric_list
+        return self._numeric_list
 
     @numeric_list.setter
-    def numeric_list(self, num_list:list[float | int]):
-        self.numeric_list = num_list
+    def numeric_list(self, num_list: list[float | int]):
+        self._numeric_list = num_list
+
+    def reset(self):
+        super().reset()
+        self._file_name = super().file_name + "-num.pkl"
+        self.numeric_list = []
 
     def append(self, number):
         self.numeric_list.append(number)
@@ -300,7 +340,7 @@ class NumericFile(BaseFile):
         with open(self.save_path, 'wb') as file:
             pickle.dump(self.numeric_list, file)
 
-        return self.save_path, "num"
+        return self.file_name, "num"
 
     @classmethod
     def load(cls,
@@ -316,5 +356,59 @@ class NumericFile(BaseFile):
 
     def __call__(self, idx, *args, **kwargs):
         return self.numeric_list[idx]
+
+
+class RawFile(BaseFile):
+
+    def __init__(self):
+        super().__init__()
+        self._file_list = []
+
+    @property
+    def file_list(self):
+        return self._file_list
+
+    @file_list.setter
+    def file_list(self, file_list: list[str]):
+        self._file_list = file_list
+
+    @property
+    def prefix(self):
+        return self.prefix
+
+    @prefix.setter
+    def prefix(self, prefix):
+        os.mkdir(os.path.join(prefix, self.file_name))
+        self.prefix = prefix
+
+    def reset(self):
+        super().reset()
+        self._file_list = []
+
+    def append(self, file_path: str):
+
+        file_name = os.path.split(file_path)[-1]
+        self._file_list.append(file_name)
+
+        shutil.copyfile(file_path,
+                        os.path.join(self.save_path,file_name))
+
+    def save(self):
+        return self.file_name, "folder"
+
+    @classmethod
+    def load(cls,
+             save_path: str):
+
+        file_list = [os.path.join(save_path, i) for i in os.listdir(save_path)]
+
+        instance = cls()
+        instance.file_list = file_list
+
+        return instance
+
+    def __call__(self, idx, *args, **kwargs):
+
+        return self.file_list[idx]
 
 
