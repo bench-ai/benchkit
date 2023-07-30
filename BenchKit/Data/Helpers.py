@@ -298,9 +298,8 @@ def get_dir_size(path) -> int:
 def iterate_directory(file_dir: str,
                       current_file: int) -> tuple[str, bool]:
 
-    dir_list = os.listdir(file_dir)
-
-    dir_list = [i.split("-")[1] for i in dir_list]
+    dir_list = sorted(os.listdir(file_dir), key=lambda x: x.split("-")[1])
+    print(dir_list[0].split("-")[1])
 
     for idx, i in enumerate(dir_list):
         if idx >= current_file:
