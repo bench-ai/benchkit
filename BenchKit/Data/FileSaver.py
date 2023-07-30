@@ -372,7 +372,7 @@ class RawFile(BaseFile):
 
     @property
     def prefix(self):
-        return self.prefix
+        return self._prefix
 
     @prefix.setter
     def prefix(self, prefix):
