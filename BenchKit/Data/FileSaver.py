@@ -34,7 +34,6 @@ class BaseFile:
 
     @property
     def save_path(self):
-
         return os.path.join(self.prefix,
                             self._file_name)
 
@@ -83,12 +82,12 @@ class TextFile(BaseFile):
     def __call__(self, idx, *args, **kwargs) -> str:
         return self._line_list[idx]
 
+
 class BooleanFile(TextFile):
 
     def __init__(self,
                  line_list: list | None = None):
         super().__init__(line_list=line_list)
-
 
     def append(self, line: bool):
         super().append(str(int(line)))
@@ -345,7 +344,6 @@ class NumericFile(BaseFile):
     @classmethod
     def load(cls,
              save_path: str):
-
         with open(save_path, 'rb') as file:
             my_var = pickle.load(file)
 
@@ -386,12 +384,11 @@ class RawFile(BaseFile):
         self._file_list = []
 
     def append(self, file_path: str):
-
         file_name = os.path.split(file_path)[-1]
         self._file_list.append(file_name)
 
         shutil.copyfile(file_path,
-                        os.path.join(self.save_path,file_name))
+                        os.path.join(self.save_path, file_name))
 
     def save(self):
         return self.file_name, "folder"
@@ -399,7 +396,6 @@ class RawFile(BaseFile):
     @classmethod
     def load(cls,
              save_path: str):
-
         file_list = [os.path.join(save_path, i) for i in os.listdir(save_path)]
 
         instance = cls()
@@ -408,7 +404,4 @@ class RawFile(BaseFile):
         return instance
 
     def __call__(self, idx, *args, **kwargs):
-
         return self.file_list[idx]
-
-
