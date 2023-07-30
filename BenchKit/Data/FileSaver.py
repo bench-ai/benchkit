@@ -377,7 +377,7 @@ class RawFile(BaseFile):
     @prefix.setter
     def prefix(self, prefix):
         os.mkdir(os.path.join(prefix, self.file_name))
-        self.prefix = prefix
+        self._prefix = prefix
 
     def reset(self):
         super().reset()
