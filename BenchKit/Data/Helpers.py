@@ -35,13 +35,27 @@ def get_folder_size(dataset_path) -> int:
     return size
 
 
+def get_dataloader(dataset: IterableChunk,
+                   dataset_name: str,
+                   num_workers=0,
+                   batch_size=16) -> DataLoader:
+
+    dataset.post_init(dataset_name, True)
+
+    dl = DataLoader(dataset=dataset,
+                    num_workers=num_workers,
+                    batch_size=batch_size,
+                    worker_init_fn=dataset.worker_init_fn)
+
+    return dl
+
+
 def get_dataset(chunk_class,
                 dataset_name: str,
                 batch_size: int,
                 num_workers: int,
                 *args,
                 **kwargs):
-
     chunk_dataset: IterableChunk = chunk_class(*args, **kwargs)
 
     chunk_dataset.post_init(dataset_name,
@@ -109,8 +123,6 @@ def test_dataloading(dataset_name: str,
         raise RuntimeError("Dataset must be created")
 
     length = ds["sample_count"]
-    # print(length)
-    # print(int(np.ceil(length / batch_size)))
 
     if length == 0:
         raise RuntimeError("Data has not been processed")
@@ -204,7 +216,6 @@ def get_total_file_count(directory):
 def save_file_and_label(dataset: ProcessorDataset,
                         ds_name: str,
                         check=100):
-
     cwd = os.getcwd()
     save_folder = os.path.join(cwd, "ProjectDatasets", ds_name)
 
@@ -299,7 +310,6 @@ def get_dir_size(path) -> int:
 
 def iterate_directory(file_dir: str,
                       current_file: int) -> tuple[str, bool]:
-
     dir_list = sorted(os.listdir(file_dir), key=lambda x: x.split("-")[1])
 
     for idx, i in enumerate(dir_list):
