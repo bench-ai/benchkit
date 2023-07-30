@@ -55,6 +55,14 @@ def write_manager():
                 line = f.readline()
 
 
+def write_dependency():
+    # template_path = Path(__file__).resolve().parent / "dependencies.txt"
+
+    if not os.path.isfile("dependencies.txt"):
+        with open("dependencies.txt", "w") as read_file:
+            pass
+
+
 def print_version():
     verbose_logo(get_version())
 
@@ -388,6 +396,7 @@ def main():
         create_dataset()
         create_model_dir()
         write_script()
+        write_dependency()
 
     if args.action == "show-ex":
         show_experiments(args.code_version,
