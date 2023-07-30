@@ -109,6 +109,8 @@ def test_dataloading(dataset_name: str,
         raise RuntimeError("Dataset must be created")
 
     length = ds["sample_count"]
+    print(length)
+    print(int(np.ceil(length / batch_size)))
 
     if length == 0:
         raise RuntimeError("Data has not been processed")
@@ -299,7 +301,6 @@ def iterate_directory(file_dir: str,
                       current_file: int) -> tuple[str, bool]:
 
     dir_list = sorted(os.listdir(file_dir), key=lambda x: x.split("-")[1])
-    print(dir_list[0].split("-")[1])
 
     for idx, i in enumerate(dir_list):
         if idx >= current_file:
