@@ -397,9 +397,10 @@ class RawFile(BaseFile):
     def load(cls,
              save_path: str):
         file_list = [os.path.join(save_path, i) for i in os.listdir(save_path)]
+        np.random.shuffle(file_list)
 
         instance = cls()
-        instance.file_list = np.random.shuffle(file_list)
+        instance.file_list = file_list
 
         return instance
 
