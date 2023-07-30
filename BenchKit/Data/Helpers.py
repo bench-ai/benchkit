@@ -121,7 +121,7 @@ def test_dataloading(dataset_name: str,
                      **kwargs)
 
     print(Fore.RED + "Running Data Loading test" + Style.RESET_ALL)
-    for _ in tqdm(dl, colour="blue", total=int(np.ceil(length / batch_size)) + 1):
+    for _ in tqdm(dl, colour="blue", total=int(np.ceil(length / batch_size))):
         pass
 
     print(Fore.GREEN + "Data Loading Test Passed" + Style.RESET_ALL)
@@ -297,7 +297,12 @@ def get_dir_size(path) -> int:
 
 def iterate_directory(file_dir: str,
                       current_file: int) -> tuple[str, bool]:
-    for idx, i in enumerate(os.listdir(file_dir)):
+
+    dir_list = os.listdir(file_dir)
+
+    dir_list = [i.split("-")[1] for i in dir_list]
+
+    for idx, i in enumerate(dir_list):
         if idx >= current_file:
             yield str(pathlib.Path(file_dir).resolve() / i)
 
