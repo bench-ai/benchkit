@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 import shutil
 import pathlib
 from tqdm import tqdm
-from BenchKit.Data.Datasets import ProcessorDataset
+from BenchKit.Data.Datasets import ProcessorDataset, IterableChunk
 from BenchKit.Miscellaneous.User import create_dataset, get_post_url, \
     delete_dataset, get_current_dataset, get_chunk_count
 
@@ -36,16 +36,18 @@ def get_folder_size(dataset_path) -> int:
 
 
 def get_dataset(chunk_class,
-                cloud: bool,
                 dataset_name: str,
                 batch_size: int,
                 num_workers: int,
                 *args,
                 **kwargs):
-    dl = DataLoader(dataset=chunk_class(dataset_name,
-                                        cloud,
-                                        *args,
-                                        **kwargs),
+
+    chunk_dataset: IterableChunk = chunk_class(*args, **kwargs)
+
+    chunk_dataset.post_init(dataset_name,
+                            cloud=False)
+
+    dl = DataLoader(dataset=chunk_dataset,
                     num_workers=num_workers,
                     batch_size=batch_size,
                     worker_init_fn=chunk_class.worker_init_fn)
@@ -112,7 +114,6 @@ def test_dataloading(dataset_name: str,
         raise RuntimeError("Data has not been processed")
 
     dl = get_dataset(chunk_dataset,
-                     False,
                      ds["name"],
                      batch_size,
                      num_workers,
@@ -326,8 +327,8 @@ def create_dataset_dir():
             file.write("    This method returns all the necessary components to build your dataset\n")
             file.write("    You will return a list of tuples, each tuple represents a different dataset\n")
             file.write("    The elements of the tuple represent the components to construct your dataset\n")
-            file.write("    Element one will be your ProcessorDataset\n")
-            file.write("    Element two will be your IterableChunk\n")
+            file.write("    Element one will be your ProcessorDataset object\n")
+            file.write("    Element two will be your IterableChunk class\n")
             file.write("    Element three will be the name of your Dataset\n")
             file.write("    Element four will be all the args needed for your Iterable Chunk as a list\n")
             file.write("    Element five will be all the kwargs needed for your Iterable Chunk as a Dict\n")

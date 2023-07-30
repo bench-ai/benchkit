@@ -70,13 +70,24 @@ class ProcessorDataset:
 
 class IterableChunk(IterableDataset):
 
-    def __init__(self,
-                 name: str,
-                 cloud: bool):
+    def __init__(self):
+
+        self._cloud = None
+        self._name = None
+        self.chunk_list = None
+        self._dataset_id = None
+        self.length = None
+        self.end_index = None
+        self.start_index = None
+        self.init_start_index = 0
+        self._file_converters = []
+
+    def post_init(self,
+                  name,
+                  cloud):
 
         self._cloud = cloud
         self._name = name
-        self.chunk_list = None
 
         dataset = get_current_dataset(name)
 
@@ -86,9 +97,6 @@ class IterableChunk(IterableDataset):
         self._dataset_id = dataset["id"]
         self.length = dataset["sample_count"]
         self.end_index = dataset["sample_count"]
-        self.start_index = None
-        self.init_start_index = 0
-        self._file_converters = []
 
     @staticmethod
     def delete_dir(uid: str):
