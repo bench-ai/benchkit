@@ -8,7 +8,8 @@ import numpy as np
 from torch.utils.data import Dataset, IterableDataset
 from typing import final
 import shutil
-from BenchKit.Data.FileSaver import BaseFile, TextFile, BooleanFile, NumpyFile, JsonFile, TorchFile, NumericFile
+from BenchKit.Data.FileSaver import BaseFile, TextFile, BooleanFile, NumpyFile, JsonFile, TorchFile, NumericFile, \
+    RawFile
 from BenchKit.Miscellaneous.User import get_get_url, get_current_dataset, get_ds_chunks
 
 
@@ -173,6 +174,8 @@ class IterableChunk(IterableDataset):
                 return TorchFile.load(file_path)
             case "num":
                 return NumericFile.load(file_path)
+            case "folder":
+                return RawFile.load(file_path)
             case _:
                 raise ModuleNotFoundError(f"tag: {tag} is not a valid tag")
 
