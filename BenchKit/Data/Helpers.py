@@ -109,8 +109,8 @@ def test_dataloading(dataset_name: str,
         raise RuntimeError("Dataset must be created")
 
     length = ds["sample_count"]
-    print(length)
-    print(int(np.ceil(length / batch_size)))
+    # print(length)
+    # print(int(np.ceil(length / batch_size)))
 
     if length == 0:
         raise RuntimeError("Data has not been processed")
