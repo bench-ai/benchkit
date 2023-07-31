@@ -55,6 +55,14 @@ def write_manager():
                 line = f.readline()
 
 
+def write_dependency():
+    # template_path = Path(__file__).resolve().parent / "dependencies.txt"
+
+    if not os.path.isfile("dependencies.txt"):
+        with open("dependencies.txt", "w") as read_file:
+            pass
+
+
 def print_version():
     verbose_logo(get_version())
 
@@ -124,7 +132,7 @@ def show_datasets():
 
     id_col = df["id"].values
 
-    df = df.drop(columns=['id', 'project_id'])
+    df = df.drop(columns=['id', 'project'])
 
     print(tabulate(df, headers='keys', tablefmt='psql'))
 
@@ -198,7 +206,15 @@ def show_experiments(version=None,
         next_page = experiment_dict["next_page"]
 
         if not server_dict:
-            raise ValueError(f"No Experiments have been run for version: {version} and state: {state}")
+
+            val_err_str = f"No Experiments have been run for version: {version if version else 1}"
+
+            if state:
+                val_err_str += f" and state: {state}."
+            else:
+                val_err_str += "."
+
+            raise ValueError(val_err_str)
 
         df = pd.DataFrame(data=server_dict)
 
@@ -228,7 +244,7 @@ def show_experiments(version=None,
 
         print("\n")
 
-        pr_str = ""
+        pr_str = "Enter the number of the Experiment log you wish to see. "
 
         if n_valid:
             pr_str += "Type 'n' to move to the next page. "
@@ -236,27 +252,21 @@ def show_experiments(version=None,
         if p_valid:
             pr_str += "Type 'p' to move to the previous page. "
 
-        if n_valid or p_valid:
+        str_inp = input(pr_str[:-2] + ": ")
 
-            pr_str += "Or enter the number of the Experiment logs you wish to see. "
-
-            str_inp = input(pr_str[:-2] + ": ")
-
-            if str_inp.lower() == "n" and n_valid:
-                page += 1
-            elif str_inp.lower() == "p" and p_valid:
-                page -= 1
-            else:
-
-                try:
-                    num = int(str_inp)
-                    show_logs(instance_series[num])
-
-                except (TypeError, ValueError):
-                    pass
-
-                ext = True
+        if str_inp.lower() == "n" and n_valid:
+            page += 1
+        elif str_inp.lower() == "p" and p_valid:
+            page -= 1
         else:
+
+            try:
+                num = int(str_inp)
+                show_logs(instance_series[num])
+
+            except (TypeError, ValueError):
+                pass
+
             ext = True
 
 
@@ -386,6 +396,7 @@ def main():
         create_dataset()
         create_model_dir()
         write_script()
+        write_dependency()
 
     if args.action == "show-ex":
         show_experiments(args.code_version,

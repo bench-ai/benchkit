@@ -1,42 +1,26 @@
-import copy
+import functools
 import os.path
 from pathlib import Path
-
 from accelerate import Accelerator
+from BenchKit.Data.Helpers import remove_all_temps
 
 
-def get_accelerator(split_batches=False,
-                    log_with=None,
-                    even_batches: bool = True,
-                    step_scheduler_with_optimizer: bool = True,
-                    dynamo_backend: str = "no",
-                    gradient_accumulation_steps: int = 1,
-                    mixed_precision: str | None = None,
-                    cpu: bool | None = None,
-                    rng_types: list[str] | None = None,
-                    kwargs_handlers: list | None = None) -> Accelerator:
+def data_loading(func):
+    """
+    A decorator to be used whenever a chunking dataloader is in use. Removes all temp dirs and free's GPU memory.
+    """
 
-    kwargs = {'split_batches': split_batches,
-              'log_with': log_with,
-              'even_batches': even_batches,
-              'step_scheduler_with_optimizer': step_scheduler_with_optimizer,
-              'dynamo_backend': dynamo_backend,
-              'gradient_accumulation_steps': gradient_accumulation_steps,
-              'mixed_precision': mixed_precision,
-              'cpu': cpu,
-              'rng_types': rng_types,
-              'kwargs_handlers': kwargs_handlers}
+    @functools.wraps(func)
+    def wrapper_timer(acc: Accelerator, *args, **kwargs):
+        value = func(acc, *args, **kwargs)
+        wipe_temp(acc)
+        acc.free_memory()
+        return value
 
-    for k, v in copy.deepcopy(kwargs).items():
-
-        if not v:
-            kwargs.pop(k)
-
-    return Accelerator(**kwargs)
+    return wrapper_timer
 
 
 def wipe_temp(acc: Accelerator):
-    from BenchKit.Data.Helpers import remove_all_temps
     acc.wait_for_everyone()
     remove_all_temps()
     acc.wait_for_everyone()
