@@ -132,7 +132,7 @@ def show_datasets():
 
     id_col = df["id"].values
 
-    df = df.drop(columns=['id', 'project_id'])
+    df = df.drop(columns=['id', 'project'])
 
     print(tabulate(df, headers='keys', tablefmt='psql'))
 

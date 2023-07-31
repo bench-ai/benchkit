@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 def get_version():
-    return "0.0.63"
+    return "0.0.64"
 
 
 def verbose_logo(version: str):
