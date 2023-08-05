@@ -55,7 +55,7 @@ class ProcessorDataset:
             raise StopIteration
 
         self._pos += 1
-        return self[self._pos - 1]
+        return self[self._len_list[self._pos - 1]]
 
     @final
     def __getitem__(self, idx) -> tuple[tuple, tuple]:
