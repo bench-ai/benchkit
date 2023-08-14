@@ -56,6 +56,7 @@ def get_dataset(chunk_class,
                 num_workers: int,
                 *args,
                 **kwargs):
+
     chunk_dataset: IterableChunk = chunk_class(*args, **kwargs)
 
     chunk_dataset.post_init(dataset_name,
