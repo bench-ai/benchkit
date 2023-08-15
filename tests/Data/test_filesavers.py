@@ -3,6 +3,7 @@ import shutil
 import uuid
 from pathlib import Path
 import numpy as np
+import pandas as pd
 import torch
 from tqdm import tqdm
 from BenchKit.Data.FileSaver import NumpyFile, BooleanFile, TextFile, TorchFile, JsonFile, NumericFile, RawFile, \
@@ -10,6 +11,80 @@ from BenchKit.Data.FileSaver import NumpyFile, BooleanFile, TextFile, TorchFile,
 from BenchKit.Data.Datasets import IterableChunk, ProcessorDataset
 from BenchKit.Data.Helpers import save_file_and_label, get_test_dataloader
 import random
+
+
+class CsvFile(BaseFile):
+
+    def __init__(self):
+        super().__init__()
+        self._file_name = super().file_name + "-csv.csv"
+        self._dict_list = []
+
+    def save(self) -> tuple[str, str]:
+        df = pd.DataFrame(self._dict_list)
+        df.to_csv(self.save_path, index=False)
+        return self.file_name, "csv"
+
+    @property
+    def dict_list(self):
+        return self._dict_list
+
+    @dict_list.setter
+    def dict_list(self, dict_list):
+        self._dict_list = dict_list
+
+    def reset(self):
+        super().reset()
+        self._file_name = super().file_name + "-csv.csv"
+        self._dict_list = []
+
+    def append(self, df_dict: dict):
+        self._dict_list.append(df_dict)
+
+    @classmethod
+    def load(cls, save_path: str):
+        line_dict = pd.read_csv(save_path).to_dict(orient="records")
+
+        instance = cls()
+        instance.dict_list = line_dict
+
+        return instance
+
+    def __call__(self, idx, *args, **kwargs):
+        return self._dict_list[idx]
+
+
+class CsvProcessor(ProcessorDataset):
+
+    def __init__(self):
+        super().__init__()
+
+        self.csv_file = CsvFile()
+
+    def _get_savers(self) -> tuple[BaseFile, ...] | BaseFile:
+        return self.csv_file
+
+    def _get_data(self,
+                  idx: int):
+        self.csv_file.append({
+            "one": np.random.randint(10),
+            "two": np.random.randint(10),
+            "three": np.random.randint(10)
+        })
+
+    def __len__(self):
+        return 1000
+
+
+class CsvChunker(IterableChunk):
+    def file_converter(self,
+                       tag: str,
+                       file_path: str) -> BaseFile:
+
+        if tag == "csv":
+            return CsvFile.load(file_path)
+        else:
+            super().file_converter(tag, file_path)
 
 
 class SingleClassTestProcessor(ProcessorDataset):
@@ -144,6 +219,22 @@ def all_file_savers():
     shutil.rmtree(os.path.join("ProjectDatasets", ds_name))
 
 
+def custom_file_saver():
+    ds_name = f"{str(uuid.uuid4())}-ds"
+    proc = CsvProcessor()
+    save_file_and_label(proc, ds_name=ds_name)
+
+    mcc = CsvChunker()
+    dl = get_test_dataloader(mcc,
+                             ds_name,
+                             ds_len=1_000)
+
+    for _ in tqdm(dl):
+        pass
+
+    # shutil.rmtree(os.path.join("ProjectDatasets", ds_name))
+
+
 def test_all_file_savers():
     all_file_savers()
 
@@ -151,4 +242,6 @@ def test_all_file_savers():
 def test_one_file_saver():
     single_file_savers()
 
-## test custom file saver
+
+def test_custom_file_saver():
+    custom_file_saver()
