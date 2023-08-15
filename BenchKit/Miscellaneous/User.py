@@ -40,8 +40,6 @@ def get_current_dataset(ds_name: str) -> dict:
 
     response = json.loads(response.content)
 
-    # print(response)
-
     return response["datasets"][0] if len(response["datasets"]) > 0 else None
 
 

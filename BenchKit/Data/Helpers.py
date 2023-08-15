@@ -50,6 +50,20 @@ def get_dataloader(dataset: IterableChunk,
     return dl
 
 
+def get_test_dataloader(dataset: IterableChunk,
+                        dataset_name: str,
+                        ds_len: int):
+
+    dataset.test_init(dataset_name, ds_len)
+
+    dl = DataLoader(dataset=dataset,
+                    num_workers=0,
+                    batch_size=1,
+                    worker_init_fn=dataset.worker_init_fn)
+
+    return dl
+
+
 def get_dataset(chunk_class,
                 dataset_name: str,
                 batch_size: int,
