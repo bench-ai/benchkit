@@ -232,7 +232,7 @@ def custom_file_saver():
     for _ in tqdm(dl):
         pass
 
-    # shutil.rmtree(os.path.join("ProjectDatasets", ds_name))
+    shutil.rmtree(os.path.join("ProjectDatasets", ds_name))
 
 
 def test_all_file_savers():
