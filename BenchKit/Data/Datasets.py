@@ -90,6 +90,7 @@ class IterableChunk(IterableDataset):
         self.start_index = None
         self.init_start_index = 0
         self._file_converters = []
+        self.length = None
 
     def post_init(self,
                   name,
@@ -105,6 +106,10 @@ class IterableChunk(IterableDataset):
 
         self._dataset_id = dataset["id"]
         self.end_index = dataset["sample_count"]
+        self.length = dataset["sample_count"]
+
+    def __len__(self):
+        return self.length
 
     def test_init(self,
                   name: str,

@@ -64,7 +64,7 @@ def get_accelerator(config: dict[str: str],
 
 def get_time_series_tracker(config: dict[str: str],
                             graph_names: str | tuple[str, ...],
-                            line_names: tuple[str] | tuple[tuple[str, ...], ...],
+                            line_names: tuple[str, ...] | tuple[tuple[str, ...], ...],
                             x_axis_name: str | tuple[str, ...],
                             y_axis_name: str | tuple[str, ...],
                             *args,
