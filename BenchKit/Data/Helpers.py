@@ -39,7 +39,6 @@ def get_dataloader(dataset: IterableChunk,
                    dataset_name: str,
                    num_workers=0,
                    batch_size=16) -> DataLoader:
-
     dataset.post_init(dataset_name, True)
 
     dl = DataLoader(dataset=dataset,
@@ -53,7 +52,6 @@ def get_dataloader(dataset: IterableChunk,
 def get_test_dataloader(dataset: IterableChunk,
                         dataset_name: str,
                         ds_len: int):
-
     dataset.test_init(dataset_name, ds_len)
 
     dl = DataLoader(dataset=dataset,
@@ -64,11 +62,10 @@ def get_test_dataloader(dataset: IterableChunk,
     return dl
 
 
-def get_dataset(chunk_dataset: IterableChunk,
-                dataset_name: str,
-                batch_size: int,
-                num_workers: int):
-
+def get_local_dataloader(chunk_dataset: IterableChunk,
+                         dataset_name: str,
+                         batch_size: int,
+                         num_workers: int):
     chunk_dataset.post_init(dataset_name,
                             cloud=False)
 
@@ -123,7 +120,6 @@ def create_dataset_zips(processed_dataset: ProcessorDataset,
 
 def test_dataloading(dataset_name: str,
                      chunk_dataset: IterableChunk):
-
     num_workers = 2
     batch_size = 16
 
@@ -137,10 +133,10 @@ def test_dataloading(dataset_name: str,
     if length == 0:
         raise RuntimeError("Data has not been processed")
 
-    dl = get_dataset(chunk_dataset,
-                     ds["name"],
-                     batch_size,
-                     num_workers)
+    dl = get_local_dataloader(chunk_dataset,
+                              ds["name"],
+                              batch_size,
+                              num_workers)
 
     print(Fore.RED + "Running Data Loading test" + Style.RESET_ALL)
     for _ in tqdm(dl, colour="blue", total=int(np.ceil(length / batch_size))):
