@@ -69,7 +69,6 @@ def get_time_series_tracker(config: dict[str: str],
                             y_axis_name: str | tuple[str, ...],
                             *args,
                             **kwargs):
-
     config_id = init_config(config)
     ts = BenchAccelerateTimeSeriesTracker(graph_names,
                                           line_names,
@@ -109,7 +108,6 @@ def get_multi_tracker(config: dict[str: str],
                       tracker_list: list,
                       *args,
                       **kwargs):
-
     config_id = init_config(config)
     kwargs["log_with"] = tracker_list
 
@@ -188,10 +186,13 @@ class BenchAccelerateTimeSeriesTracker(GeneralTracker):
     @on_main_process
     def log(self,
             values: dict,
-            step: int | None = None,
-            graph_name: str | None = None):
+            step: int | None = None):
 
-        graph_name = graph_name.upper()
+        try:
+            graph_name = values.pop("graph")
+            graph_name.upper()
+        except KeyError:
+            raise KeyError(f"There is no key provided in the values dict called graph_name")
 
         try:
             graph_id = self.graph_id_dict[graph_name]
@@ -202,7 +203,7 @@ class BenchAccelerateTimeSeriesTracker(GeneralTracker):
         num_threads = 4
 
         graph_id_list = [graph_id] * len(values)
-        line_name_list = list(values.keys())
+        line_name_list = [i.upper() for i in values.keys()]
         x_value_list = [step] * len(values)
         y_value_list = list(values.values())
 
