@@ -439,6 +439,29 @@ def init_config(params: dict):
     return response_dict["id"]
 
 
+def get_all_configs(instance_id: str):
+    request_url = os.path.join(get_main_url(),
+                               "api",
+                               "tracking",
+                               "init",
+                               "config")
+
+    next_page = 1
+    config_list = []
+    while next_page:
+        response = request_executor("get",
+                                    url=request_url,
+                                    params={"instance_id": instance_id,
+                                            "page": next_page})
+
+        response_dict = json.load(response.content)
+
+        config_list += response_dict["config_list"]
+        next_page = response_dict["next_page"]
+
+    return config_list
+
+
 def make_time_series_graph(config_id: str,
                            name: str,
                            line_names: list[str],
