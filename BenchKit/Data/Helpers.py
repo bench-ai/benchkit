@@ -45,7 +45,7 @@ def get_dataloader(dataset: IterableChunk,
     dl = DataLoader(dataset=dataset,
                     num_workers=num_workers,
                     batch_size=batch_size,
-                    worker_init_fn=dataset.worker_init_fn)
+                    worker_init_fn=IterableChunk.worker_init_fn)
 
     return dl
 
@@ -59,19 +59,15 @@ def get_test_dataloader(dataset: IterableChunk,
     dl = DataLoader(dataset=dataset,
                     num_workers=0,
                     batch_size=1,
-                    worker_init_fn=dataset.worker_init_fn)
+                    worker_init_fn=IterableChunk.worker_init_fn)
 
     return dl
 
 
-def get_dataset(chunk_class,
+def get_dataset(chunk_dataset: IterableChunk,
                 dataset_name: str,
                 batch_size: int,
-                num_workers: int,
-                *args,
-                **kwargs):
-
-    chunk_dataset: IterableChunk = chunk_class(*args, **kwargs)
+                num_workers: int):
 
     chunk_dataset.post_init(dataset_name,
                             cloud=False)
@@ -79,7 +75,7 @@ def get_dataset(chunk_class,
     dl = DataLoader(dataset=chunk_dataset,
                     num_workers=num_workers,
                     batch_size=batch_size,
-                    worker_init_fn=chunk_class.worker_init_fn)
+                    worker_init_fn=IterableChunk.worker_init_fn)
 
     return dl
 
@@ -126,9 +122,8 @@ def create_dataset_zips(processed_dataset: ProcessorDataset,
 
 
 def test_dataloading(dataset_name: str,
-                     chunk_dataset,
-                     *args,
-                     **kwargs):
+                     chunk_dataset: IterableChunk):
+
     num_workers = 2
     batch_size = 16
 
@@ -145,9 +140,7 @@ def test_dataloading(dataset_name: str,
     dl = get_dataset(chunk_dataset,
                      ds["name"],
                      batch_size,
-                     num_workers,
-                     *args,
-                     **kwargs)
+                     num_workers)
 
     print(Fore.RED + "Running Data Loading test" + Style.RESET_ALL)
     for _ in tqdm(dl, colour="blue", total=int(np.ceil(length / batch_size))):

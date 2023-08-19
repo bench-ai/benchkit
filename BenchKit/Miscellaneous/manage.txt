@@ -102,7 +102,7 @@ def cli():
 
         for input_args in arg_list:
 
-            p_ds, c_ds, name, arg_list, kwarg_dict = input_args
+            p_ds, c_ds, name = input_args
 
             argument_list = [args.zip, args.tdl, args.up]
 
@@ -113,7 +113,7 @@ def cli():
                 create_dataset_zips(p_ds, name)
 
             if args.tdl:
-                test_dataloading(name, c_ds, *arg_list, **kwarg_dict)
+                test_dataloading(name, c_ds)
 
             if args.up:
                 run_upload(name)

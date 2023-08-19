@@ -109,6 +109,7 @@ class IterableChunk(IterableDataset):
         self.length = dataset["sample_count"]
 
     def __len__(self):
+        #possibly dangerous
         return self.length
 
     def test_init(self,
