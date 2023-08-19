@@ -190,7 +190,7 @@ class BenchAccelerateTimeSeriesTracker(GeneralTracker):
 
         try:
             graph_name = values.pop("graph")
-            graph_name.upper()
+            graph_name = graph_name.upper()
         except KeyError:
             raise KeyError(f"There is no key provided in the values dict called graph_name")
 
