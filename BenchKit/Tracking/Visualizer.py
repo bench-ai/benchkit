@@ -102,7 +102,7 @@ def get_display_matrix(plot_count: int) -> tuple[int, int]:
     x = 1
     y = 1
     for i in range(plot_count):
-        if x * y < plot_count:
+        if (x * y) < plot_count:
             if y <= x:
                 y += 1
             else:
@@ -149,7 +149,7 @@ def display_all_configs(instance_id):
             plt.show()
 
         except ValueError:
-            loop = True
+            loop = False
 
 
 def display_time_series():

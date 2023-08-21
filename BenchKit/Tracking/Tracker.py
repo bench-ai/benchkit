@@ -2,13 +2,15 @@ import concurrent.futures
 import copy
 from accelerate.tracking import GeneralTracker, on_main_process
 import os
-from BenchKit.Miscellaneous.User import init_config, make_time_series_graph, plot_time_series_point
+from BenchKit.Miscellaneous.User import init_config
 from accelerate import Accelerator
 from accelerate.utils import FullyShardedDataParallelPlugin, ProjectConfiguration, MegatronLMPlugin, \
     GradientAccumulationPlugin, DeepSpeedPlugin
 
 from datetime import timezone
 import datetime
+
+from .Graphers.TimeSeries import BenchGraph
 
 
 class AcceleratorInitializer:
@@ -62,31 +64,6 @@ def get_accelerator(config: dict[str: str],
     return config_id, acc, *acc.prepare(*args)
 
 
-def get_time_series_tracker(config: dict[str: str],
-                            graph_names: str | tuple[str, ...],
-                            line_names: tuple[str, ...] | tuple[tuple[str, ...], ...],
-                            x_axis_name: str | tuple[str, ...],
-                            y_axis_name: str | tuple[str, ...],
-                            *args,
-                            **kwargs):
-    config_id = init_config(config)
-    ts = BenchAccelerateTimeSeriesTracker(graph_names,
-                                          line_names,
-                                          x_axis_name,
-                                          y_axis_name,
-                                          config_id)
-
-    kwargs["log_with"] = [ts]
-
-    acc = AcceleratorInitializer.accelerator(**kwargs)
-    project_name = os.getenv("EXPERIMENT_NAME").replace(" ",
-                                                        "_") + str(datetime.datetime.now(timezone.utc)).replace(" ",
-                                                                                                                "_")
-
-    acc.init_trackers(project_name, config=config)
-    return config_id, acc, *acc.prepare(*args)
-
-
 def get_tensorboard_tracker(config: dict[str: str],
                             *args,
                             **kwargs):
@@ -104,12 +81,15 @@ def get_tensorboard_tracker(config: dict[str: str],
     return config_id, acc, *acc.prepare(*args)
 
 
-def get_multi_tracker(config: dict[str: str],
-                      tracker_list: list,
+def get_bench_tracker(config: dict[str: str],
+                      graph_list: list[BenchGraph],
                       *args,
                       **kwargs):
+
     config_id = init_config(config)
-    kwargs["log_with"] = tracker_list
+
+    tracker = BenchTracker(*graph_list)
+    kwargs["log_with"] = [tracker]
 
     acc = AcceleratorInitializer.accelerator(**kwargs)
     project_name = os.getenv("EXPERIMENT_NAME").replace(" ",
@@ -120,68 +100,31 @@ def get_multi_tracker(config: dict[str: str],
     return config_id, acc, *acc.prepare(*args)
 
 
-class BenchAccelerateTimeSeriesTracker(GeneralTracker):
-    name = "BenchTimeSeriesGraph"
+class BenchTracker(GeneralTracker):
+    name = "BenchTracker"
     requires_logging_directory = False
 
     @on_main_process
     def __init__(self,
-                 graph_names: str | tuple[str, ...],
-                 line_names: tuple[str] | tuple[tuple[str, ...], ...],
-                 x_axis_name: str | tuple[str, ...],
-                 y_axis_name: str | tuple[str, ...],
-                 config_id: str):
+                 *args: BenchGraph):
 
         super().__init__()
-        self.graph_names = (graph_names,) if isinstance(graph_names, str) else graph_names
-        line_names = (line_names,) if isinstance(line_names[0], str) else line_names
-        self.config_id = config_id
-
-        self.line_names = []
-        for i in line_names:
-            if len(i) > 50:
-                raise ValueError("No more than 50 lines can be generated per graph")
-
-            line_tup = []
-            for j in range(len(i)):
-                if not isinstance(i[j], str):
-                    raise ValueError("line_names must be strings")
-
-                line_tup.append(i[j].upper())
-
-            self.line_names.append(line_tup)
-
-        self.line_names = tuple(self.line_names)
-
-        self.x_axis_names = (x_axis_name,) if isinstance(x_axis_name, str) else x_axis_name
-        self.y_axis_names = (y_axis_name,) if isinstance(y_axis_name, str) else y_axis_name
-        self.graph_id_dict = {}
+        self.tracker_list = {i.graph_name: i for i in args}
 
     @property
     def tracker(self):
-        return self.graph_id_dict
+        return self.tracker_list
 
     @on_main_process
     def store_init_configuration(self,
                                  values: dict):
 
-        config_id_list = [self.config_id] * len(self.graph_names)
-
-        zips = zip(config_id_list,
-                   self.graph_names,
-                   self.line_names,
-                   self.x_axis_names,
-                   self.y_axis_names)
-
         num_threads = 4
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
-            future_results = [executor.submit(make_time_series_graph, *z) for z in zips]
+            future_results = [executor.submit(graph.init_graph) for graph in self.tracker_list.values()]
 
-            results = [future.result() for future in future_results]
-
-        for r, g in zip(results, self.graph_names):
-            self.graph_id_dict[g.upper()] = r
+            [future.result() for future in future_results]
 
     @on_main_process
     def log(self,
@@ -194,23 +137,4 @@ class BenchAccelerateTimeSeriesTracker(GeneralTracker):
         except KeyError:
             raise KeyError(f"There is no key provided in the values dict called graph_name")
 
-        try:
-            graph_id = self.graph_id_dict[graph_name]
-
-        except KeyError:
-            raise KeyError(f"There is no graph named {graph_name}")
-
-        num_threads = 4
-
-        graph_id_list = [graph_id] * len(values)
-        line_name_list = [i.upper() for i in values.keys()]
-        x_value_list = [step] * len(values)
-        y_value_list = list(values.values())
-
-        zips = zip(graph_id_list, line_name_list, x_value_list, y_value_list)
-
-        with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
-            future_results = [executor.submit(plot_time_series_point, *z) for z in zips]
-
-            for future in future_results:
-                future.result()
+        self.tracker_list[graph_name].log_value(values, step=step)
