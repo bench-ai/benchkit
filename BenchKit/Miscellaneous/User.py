@@ -448,18 +448,79 @@ def get_all_configs(instance_id: str):
 
     next_page = 1
     config_list = []
+    id_list = []
+
     while next_page:
         response = request_executor("get",
                                     url=request_url,
                                     params={"instance_id": instance_id,
                                             "page": next_page})
 
-        response_dict = json.load(response.content)
+        response_dict = json.loads(response.content)
 
-        config_list += response_dict["config_list"]
+        config_list += [i["parameters"] for i in response_dict["config_list"]]
+        id_list += [i["id"] for i in response_dict["config_list"]]
+
         next_page = response_dict["next_page"]
 
-    return config_list
+    return config_list, id_list
+
+
+def get_time_series_points(line_name: str,
+                           graph_id):
+
+    point_count = 100
+
+    request_url = os.path.join(get_main_url(),
+                               "api",
+                               "tracking",
+                               "time-series",
+                               "plot",
+                               "segmented",
+                               "b-k")
+
+    response = request_executor("get",
+                                url=request_url,
+                                params={"point_count": point_count,
+                                        "line_name": line_name,
+                                        "graph_id":graph_id})
+
+    response_content = json.loads(response.content)
+
+    response_dict = {"line_name": line_name,
+                     "x_list": [],
+                     "y_list": []}
+
+    for i in response_content["line_list"]:
+        response_dict["x_list"].append(i["data"]["x_value"])
+        response_dict["y_list"].append(i["data"]["y_value"])
+
+    return response_dict
+
+
+def get_all_graphs(config_id: str):
+    next_page = 1
+    graph_list = []
+
+    request_url = os.path.join(get_main_url(),
+                               "api",
+                               "tracking",
+                               "graphs",
+                               "b-k")
+
+    while next_page:
+        response = request_executor("get",
+                                    url=request_url,
+                                    params={"page": next_page,
+                                            "config_id": config_id})
+
+        response_list = json.loads(response.content)
+
+        next_page = response_list["next_page"]
+
+        graph_list += response_list["graph_list"]
+
+    return graph_list
 
 
 def make_time_series_graph(config_id: str,

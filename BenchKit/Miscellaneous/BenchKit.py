@@ -7,6 +7,7 @@ import gzip
 import shutil
 import requests
 from BenchKit.NeuralNetworks.Helpers import create_model_dir
+from BenchKit.Tracking.Visualizer import display_all_configs
 from BenchKit.Train.Helpers import write_script
 from .Settings import convert_timestamp
 from .Verbose import verbose_logo, get_version
@@ -14,7 +15,7 @@ import argparse
 import pandas as pd
 from .User import get_user_project, get_dataset_list, get_versions, get_checkpoint_url, test_login, \
     list_all_checkpoints, delete_checkpoints, delete_dataset, delete_version, pull_project_code, kill_server, \
-    get_experiments, get_logs, get_all_configs
+    get_experiments, get_logs
 from tabulate import tabulate
 from tqdm import tqdm
 from BenchKit.Miscellaneous.MakeTar import extract_tar
@@ -262,7 +263,6 @@ def show_experiments(version=None,
 
             try:
                 num = int(str_inp)
-                print("Type 1 to see logs and 2 to see configs")
                 show_options(instance_series[num])
 
             except (TypeError, ValueError):
@@ -274,10 +274,10 @@ def show_experiments(version=None,
 def show_options(instance_id: str):
     inp = input("Type 1 to see logs and 2 to see configs: ")
 
-    if inp == 1:
+    if inp == "1":
         show_logs(instance_id)
-    elif inp == 2:
-        print(get_all_configs(instance_id))
+    elif inp == "2":
+        display_all_configs(instance_id)
 
 
 def show_logs(instance_id: str):
