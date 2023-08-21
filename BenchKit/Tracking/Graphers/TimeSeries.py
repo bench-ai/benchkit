@@ -1,6 +1,5 @@
 from BenchKit.Miscellaneous.User import make_time_series_graph, plot_time_series_point
 import concurrent.futures
-
 from .BaseGraph import BenchGraph
 
 
@@ -10,10 +9,9 @@ class TimeSeries(BenchGraph):
                  graph_name: str,
                  line_names: tuple[str] | str,
                  x_axis_name: str,
-                 y_axis_name: str,
-                 config_id: dict):
+                 y_axis_name: str):
 
-        super().__init__(graph_name, config_id)
+        super().__init__(graph_name)
         line_names = (line_names,) if isinstance(line_names, str) else line_names
 
         if len(line_names) > 50:
@@ -24,8 +22,8 @@ class TimeSeries(BenchGraph):
         self.y_axis_name = y_axis_name
         self.graph_id = None
 
-    def init_graph(self):
-        graph_id = make_time_series_graph(self.config_id,
+    def init_graph(self, config_id):
+        graph_id = make_time_series_graph(config_id,
                                           self.graph_name,
                                           self.line_names,
                                           self.x_axis_name,

@@ -88,7 +88,7 @@ def get_bench_tracker(config: dict[str: str],
 
     config_id = init_config(config)
 
-    tracker = BenchTracker(*graph_list)
+    tracker = BenchTracker(config_id, *graph_list)
     kwargs["log_with"] = [tracker]
 
     acc = AcceleratorInitializer.accelerator(**kwargs)
@@ -106,10 +106,12 @@ class BenchTracker(GeneralTracker):
 
     @on_main_process
     def __init__(self,
+                 config_id: str,
                  *args: BenchGraph):
 
         super().__init__()
         self.tracker_list = {i.graph_name: i for i in args}
+        self.config_id = config_id
 
     @property
     def tracker(self):
@@ -122,7 +124,7 @@ class BenchTracker(GeneralTracker):
         num_threads = 4
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
-            future_results = [executor.submit(graph.init_graph) for graph in self.tracker_list.values()]
+            future_results = [executor.submit(graph.init_graph, self.config_id) for graph in self.tracker_list.values()]
 
             [future.result() for future in future_results]
 
