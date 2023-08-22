@@ -1,12 +1,16 @@
+import concurrent.futures
 import copy
-import json
 from accelerate.tracking import GeneralTracker, on_main_process
 import os
-import pandas as pd
-from BenchKit.Miscellaneous.User import update_server
+from BenchKit.Miscellaneous.User import init_config
 from accelerate import Accelerator
 from accelerate.utils import FullyShardedDataParallelPlugin, ProjectConfiguration, MegatronLMPlugin, \
     GradientAccumulationPlugin, DeepSpeedPlugin
+
+from datetime import timezone
+import datetime
+
+from .Graphers.TimeSeries import BenchGraph
 
 
 class AcceleratorInitializer:
@@ -52,122 +56,87 @@ class AcceleratorInitializer:
         return Accelerator(**kwargs)
 
 
+def get_accelerator(config: dict[str: str],
+                    *args,
+                    **kwargs):
+    config_id = init_config(config)
+    acc = AcceleratorInitializer.accelerator(**kwargs)
+    return config_id, acc, *acc.prepare(*args)
+
+
 def get_tensorboard_tracker(config: dict[str: str],
                             *args,
                             **kwargs):
+    config_id = init_config(config)
 
     kwargs["project_config"] = ProjectConfiguration(project_dir=".", logging_dir=os.getenv("LOG_DIR"))
     kwargs["log_with"] = "tensorboard"
 
     acc = AcceleratorInitializer.accelerator(**kwargs)
-    acc.init_trackers(os.getenv("EXPERIMENT_NAME"), config=config)
+    project_name = os.getenv("EXPERIMENT_NAME").replace(" ",
+                                                        "_") + str(datetime.datetime.now(timezone.utc)).replace(" ",
+                                                                                                                "_")
 
-    return acc, *acc.prepare(*args)
+    acc.init_trackers(project_name, config=config)
+    return config_id, acc, *acc.prepare(*args)
 
 
-class BenchAccelerateTracker(GeneralTracker):
-    name = "BaseTracker"
+def get_bench_tracker(config: dict[str: str],
+                      graph_list: list[BenchGraph],
+                      *args,
+                      **kwargs):
+
+    config_id = init_config(config)
+
+    tracker = BenchTracker(config_id, *graph_list)
+    kwargs["log_with"] = [tracker]
+
+    acc = AcceleratorInitializer.accelerator(**kwargs)
+    project_name = os.getenv("EXPERIMENT_NAME").replace(" ",
+                                                        "_") + str(datetime.datetime.now(timezone.utc)).replace(" ",
+                                                                                                                "_")
+
+    acc.init_trackers(project_name, config=config)
+    return config_id, acc, *acc.prepare(*args)
+
+
+class BenchTracker(GeneralTracker):
+    name = "BenchTracker"
     requires_logging_directory = False
 
     @on_main_process
     def __init__(self,
-                 run_name: str,
-                 epochs):
+                 config_id: str,
+                 *args: BenchGraph):
 
         super().__init__()
-
-        self._step = 0
-        self._progress_bar = epochs
-        self._instance = os.getenv("INSTANCE_ID")
-        self.run_name = run_name
+        self.tracker_list = {i.graph_name: i for i in args}
+        self.config_id = config_id
 
     @property
     def tracker(self):
-        return self.run_name
+        return self.tracker_list
 
     @on_main_process
     def store_init_configuration(self,
-                                 values: dict,
-                                 message=None):
+                                 values: dict):
 
-        if not message:
-            message = json.dumps(values)[:248]
+        num_threads = 4
 
-        update_server(self._instance,
-                      progress=self._progress_bar,
-                      last_message=message)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
+            future_results = [executor.submit(graph.init_graph, self.config_id) for graph in self.tracker_list.values()]
+
+            [future.result() for future in future_results]
 
     @on_main_process
     def log(self,
             values: dict,
-            message: str | None = None,
             step: int | None = None):
 
-        if not message:
-            message = json.dumps(values)[:248]
+        try:
+            graph_name = values.pop("graph")
+            graph_name = graph_name.upper()
+        except KeyError:
+            raise KeyError(f"There is no key provided in the values dict called graph_name")
 
-        self._step += 1
-
-        update_server(self._instance,
-                      current_step=self._step,
-                      last_message=message)
-
-    @on_main_process
-    def end_training(self):
-        update_server(self._instance,
-                      last_message="TRAINING COMPLETED")
-
-
-class BenchTracker:
-
-    def __init__(self,
-                 columns: list[str],
-                 file_name: str,
-                 hyperparameter_config: dict):
-
-        if not os.path.isdir("log"):
-            os.mkdir("log")
-
-        self._save_path = os.path.join("log", file_name + ".csv")
-        self._pd = pd.DataFrame(columns=columns, data={i: "0" for i in columns}, index=[0])
-        self._first = True
-        self._hp_config = hyperparameter_config
-
-    @property
-    def save_path(self):
-        return self._save_path
-
-    def write(self, *args, **kwargs):
-        if self._first:
-            self._pd.to_csv(path_or_buf=self._save_path,
-                            index=False,
-                            mode="w")
-            self._first = False
-        else:
-            self._pd.to_csv(path_or_buf=self._save_path,
-                            index=False,
-                            mode="a+",
-                            header=False)
-
-
-class ScatterPlot(BenchTracker):
-
-    def __init__(self,
-                 x_axis: str,
-                 y_axis_list: list[str],
-                 file_name: str,
-                 hyperparameter_config):
-        columns = ["line_name", x_axis, *y_axis_list]
-        self._axis_one = x_axis
-        self._axis_list = y_axis_list
-
-        super().__init__(columns,
-                         file_name,
-                         hyperparameter_config)
-
-    def write(self,
-              dataset_name: str,
-              x: int,
-              **kwargs):
-        self._pd.iloc[0] = pd.Series(data={"line_name": dataset_name, self._axis_one: x, **kwargs})
-        super().write()
+        self.tracker_list[graph_name].log_value(values, step=step)

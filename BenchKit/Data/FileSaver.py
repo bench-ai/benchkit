@@ -3,6 +3,8 @@ import os
 import pickle
 import shutil
 import uuid
+import warnings
+
 import numpy as np
 import torch
 
@@ -80,7 +82,7 @@ class TextFile(BaseFile):
         return cls(line_list=lines)
 
     def __call__(self, idx, *args, **kwargs) -> str:
-        return self._line_list[idx]
+        return self._line_list[idx][:-1]
 
 
 class BooleanFile(TextFile):
@@ -104,7 +106,7 @@ class NumpyFile(BaseFile):
 
     def __init__(self,
                  enforce_shape: bool,
-                 shape: tuple[int] | None = None):
+                 shape: tuple[int, ...] | None = None):
 
         super().__init__()
         self._enforce_shape = enforce_shape
@@ -115,11 +117,8 @@ class NumpyFile(BaseFile):
         self._file_name = file_str.format("enforced-array.npy") if enforce_shape else file_str.format("array.npz")
         self.shape = shape
 
-        if enforce_shape and not shape:
-            raise RuntimeError("To enforce a shape a shape must be provided")
-
         self._arr_dict = {}
-        self._arr = None
+        self.arr = np.array([np.NaN])
 
     def reset(self):
         super().reset()
@@ -127,7 +126,7 @@ class NumpyFile(BaseFile):
         file_str += "-{}"
         self._file_name = file_str.format("enforced-array.npy") if self.enforce_shape else file_str.format("array.npz")
         self.arr_dict = {}
-        self.arr = None
+        self.arr = np.array([np.NaN])
 
     @property
     def arr_dict(self):
@@ -156,7 +155,7 @@ class NumpyFile(BaseFile):
     def append(self, arr):
 
         if isinstance(arr, list):
-            arr = np.array(list)
+            arr = np.array(arr)
 
         if self.enforce_shape:
 
@@ -165,7 +164,7 @@ class NumpyFile(BaseFile):
 
             arr = np.expand_dims(arr, axis=0)
 
-            if not self.arr:
+            if np.isnan(self.arr).any():
                 self.arr = arr
             else:
                 self.arr = np.concatenate([self.arr, arr], axis=0)
@@ -217,6 +216,7 @@ class TorchFile(BaseFile):
         self.shape = torch.Size(shape)
 
         self._ten = None
+        self._cat = False
 
     @property
     def ten(self):
@@ -228,16 +228,21 @@ class TorchFile(BaseFile):
 
     def append(self, ten: torch.Tensor):
 
-        if isinstance(ten, list):
+        if isinstance(ten, (list, np.ndarray)):
             ten = torch.Tensor(ten)
+        elif isinstance(ten, torch.Tensor):
+            pass
+        else:
+            raise ValueError(f"TorchFile does not accept {ten.__class__}")
 
         if ten.size() != self.shape:
             raise RuntimeError(f"Enforced Shape of {self.shape} does not match tensor shape {ten.size()}")
 
         ten = torch.unsqueeze(ten, dim=0)
 
-        if not self.ten:
+        if not self._cat:
             self.ten = ten
+            self._cat = True
         else:
             self.ten = torch.cat((self.ten, ten), dim=0)
 
@@ -262,6 +267,7 @@ class TorchFile(BaseFile):
         super().reset()
         self._file_name = super().file_name + "-ten.pt"
         self.ten = None
+        self._cat = False
 
     def __call__(self, idx, *args, **kwargs):
         return self.ten[idx]
@@ -387,17 +393,26 @@ class RawFile(BaseFile):
         file_name = os.path.split(file_path)[-1]
         self._file_list.append(file_name)
 
+        if file_name in self._file_list:
+            warnings.warn(f"Duplicate file named: {file_name} found")
+
         shutil.copyfile(file_path,
                         os.path.join(self.save_path, file_name))
 
     def save(self):
+        with open(os.path.join(self.save_path, "ann.json"), "w") as file:
+            json.dump(self.file_list, file)
+
         return self.file_name, "folder"
 
     @classmethod
     def load(cls,
              save_path: str):
-        file_list = [os.path.join(save_path, i) for i in os.listdir(save_path)]
-        np.random.shuffle(file_list)
+
+        with open(os.path.join(save_path, "ann.json"), "r") as file:
+            file_list = json.load(file)
+
+        file_list = [os.path.join(save_path, i) for i in file_list]
 
         instance = cls()
         instance.file_list = file_list

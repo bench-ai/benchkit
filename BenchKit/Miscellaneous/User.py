@@ -40,8 +40,6 @@ def get_current_dataset(ds_name: str) -> dict:
 
     response = json.loads(response.content)
 
-    # print(response)
-
     return response["datasets"][0] if len(response["datasets"]) > 0 else None
 
 
@@ -283,24 +281,21 @@ def get_dataset(dataset_id: str):
 
 
 def get_get_url(chunk_id: str):
-
     request_url = os.path.join(get_main_url(), "api", "dataset", "upload")
 
-    instance_id = os.getenv("INSTANCE_ID")
+    # instance_id = os.getenv("INSTANCE_ID")
 
     response = request_executor("get",
                                 url=request_url,
-                                params={"chunk_id": chunk_id,
-                                        "instance_id": instance_id})
+                                params={"chunk_id": chunk_id})
 
     return json.loads(response.content)
 
 
 def get_ds_chunks(dataset_id: str):
-
     request_url = os.path.join(get_main_url(), "api", "dataset", "list", "chunk")
 
-    instance_id = os.getenv("INSTANCE_ID")
+    # instance_id = os.getenv("INSTANCE_ID")
 
     next_page = 1
 
@@ -310,8 +305,7 @@ def get_ds_chunks(dataset_id: str):
         response = request_executor("get",
                                     url=request_url,
                                     params={"dataset_id": dataset_id,
-                                            "page": next_page,
-                                            "instance_id": instance_id})
+                                            "page": next_page})
 
         response_dict = json.loads(response.content)
 
@@ -422,6 +416,161 @@ def get_experiments(page: int,
                                         "state": state})
 
     return json.loads(response.content)
+
+
+def init_config(params: dict):
+    instance_id = os.getenv("INSTANCE_ID")
+
+    request_url = os.path.join(get_main_url(),
+                               "api",
+                               "tracking",
+                               "init",
+                               "config")
+
+    response = request_executor("post",
+                                url=request_url,
+                                json={"instance_id": instance_id,
+                                      "parameters": params})
+
+    response_dict = json.loads(response.content)
+
+    return response_dict["id"]
+
+
+def get_all_configs(instance_id: str):
+    request_url = os.path.join(get_main_url(),
+                               "api",
+                               "tracking",
+                               "init",
+                               "config")
+
+    next_page = 1
+    config_list = []
+    id_list = []
+
+    while next_page:
+        response = request_executor("get",
+                                    url=request_url,
+                                    params={"instance_id": instance_id,
+                                            "page": next_page})
+
+        response_dict = json.loads(response.content)
+
+        config_list += [i["parameters"] for i in response_dict["config_list"]]
+        id_list += [i["id"] for i in response_dict["config_list"]]
+
+        next_page = response_dict["next_page"]
+
+    return config_list, id_list
+
+
+def get_time_series_points(line_name: str,
+                           graph_id):
+
+    point_count = 100
+
+    request_url = os.path.join(get_main_url(),
+                               "api",
+                               "tracking",
+                               "time-series",
+                               "plot",
+                               "segmented",
+                               "b-k")
+
+    response = request_executor("get",
+                                url=request_url,
+                                params={"point_count": point_count,
+                                        "line_name": line_name,
+                                        "graph_id":graph_id})
+
+    response_content = json.loads(response.content)
+
+    response_dict = {"line_name": line_name,
+                     "x_list": [],
+                     "y_list": []}
+
+    for i in response_content["line_list"]:
+        response_dict["x_list"].append(i["data"]["x_value"])
+        response_dict["y_list"].append(i["data"]["y_value"])
+
+    return response_dict
+
+
+def get_all_graphs(config_id: str):
+    next_page = 1
+    graph_list = []
+
+    request_url = os.path.join(get_main_url(),
+                               "api",
+                               "tracking",
+                               "graphs",
+                               "b-k")
+
+    while next_page:
+        response = request_executor("get",
+                                    url=request_url,
+                                    params={"page": next_page,
+                                            "config_id": config_id})
+
+        response_list = json.loads(response.content)
+
+        next_page = response_list["next_page"]
+
+        graph_list += response_list["graph_list"]
+
+    return graph_list
+
+
+def make_time_series_graph(config_id: str,
+                           name: str,
+                           line_names: list[str],
+                           x_name: str,
+                           y_name: str) -> str:
+    request_url = os.path.join(get_main_url(),
+                               "api",
+                               "tracking",
+                               "time-series")
+
+    response = request_executor("post",
+                                url=request_url,
+                                json={
+                                    "config_id": config_id,
+                                    "name": name,
+                                    "descriptors": {
+                                        "line_names": line_names,
+                                        "x_name": x_name,
+                                        "y_name": y_name
+                                    }
+                                })
+
+    response_dict = json.loads(response.content)
+
+    return response_dict["id"]
+
+
+def plot_time_series_point(graph_id: str,
+                           line_name: str,
+                           x_value: int,
+                           y_value: float):
+    request_url = os.path.join(get_main_url(),
+                               "api",
+                               "tracking",
+                               "time-series",
+                               "plot")
+
+    response = request_executor("post",
+                                url=request_url,
+                                json={
+                                    "graph_id": graph_id,
+                                    "data_point": {
+                                        "line_name": line_name,
+                                        "x_value": x_value,
+                                        "y_value": y_value
+                                    }
+                                })
+    response_dict = json.loads(response.content)
+
+    return response_dict
 
 
 def get_logs(page: int,

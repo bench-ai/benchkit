@@ -7,6 +7,7 @@ import gzip
 import shutil
 import requests
 from BenchKit.NeuralNetworks.Helpers import create_model_dir
+from BenchKit.Tracking.Visualizer import display_all_configs
 from BenchKit.Train.Helpers import write_script
 from .Settings import convert_timestamp
 from .Verbose import verbose_logo, get_version
@@ -262,12 +263,21 @@ def show_experiments(version=None,
 
             try:
                 num = int(str_inp)
-                show_logs(instance_series[num])
+                show_options(instance_series[num])
 
             except (TypeError, ValueError):
                 pass
 
             ext = True
+
+
+def show_options(instance_id: str):
+    inp = input("Type 1 to see logs and 2 to see configs: ")
+
+    if inp == "1":
+        show_logs(instance_id)
+    elif inp == "2":
+        display_all_configs(instance_id)
 
 
 def show_logs(instance_id: str):
