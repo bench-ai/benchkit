@@ -283,12 +283,11 @@ def get_dataset(dataset_id: str):
 def get_get_url(chunk_id: str):
     request_url = os.path.join(get_main_url(), "api", "dataset", "upload")
 
-    instance_id = os.getenv("INSTANCE_ID")
+    # instance_id = os.getenv("INSTANCE_ID")
 
     response = request_executor("get",
                                 url=request_url,
-                                params={"chunk_id": chunk_id,
-                                        "instance_id": instance_id})
+                                params={"chunk_id": chunk_id})
 
     return json.loads(response.content)
 
@@ -296,7 +295,7 @@ def get_get_url(chunk_id: str):
 def get_ds_chunks(dataset_id: str):
     request_url = os.path.join(get_main_url(), "api", "dataset", "list", "chunk")
 
-    instance_id = os.getenv("INSTANCE_ID")
+    # instance_id = os.getenv("INSTANCE_ID")
 
     next_page = 1
 
@@ -306,8 +305,7 @@ def get_ds_chunks(dataset_id: str):
         response = request_executor("get",
                                     url=request_url,
                                     params={"dataset_id": dataset_id,
-                                            "page": next_page,
-                                            "instance_id": instance_id})
+                                            "page": next_page})
 
         response_dict = json.loads(response.content)
 

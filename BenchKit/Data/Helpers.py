@@ -66,6 +66,7 @@ def get_local_dataloader(chunk_dataset: IterableChunk,
                          dataset_name: str,
                          batch_size: int,
                          num_workers: int):
+
     chunk_dataset.post_init(dataset_name,
                             cloud=False)
 
