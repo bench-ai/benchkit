@@ -2,7 +2,7 @@ import os.path
 import shutil
 import tarfile
 from accelerate import Accelerator
-from BenchKit.Data.Helpers import upload_file
+from BenchKit.Miscellaneous.utils.bucket import upload_using_presigned_url
 from accelerate.tracking import on_main_process
 from BenchKit.Miscellaneous.requests.model_save import post_checkpoint_url
 
@@ -35,10 +35,10 @@ def upload_checkpoint(checkpoint_name: str,
 
     req = post_checkpoint_url(checkpoint_name + ".tar.gz")
 
-    upload_file(req["url"],
-                checkpoint_name + ".tar.gz",
-                checkpoint_name + ".tar.gz",
-                req["fields"])
+    upload_using_presigned_url(req["url"],
+                               checkpoint_name + ".tar.gz",
+                               checkpoint_name + ".tar.gz",
+                               req["fields"])
 
     shutil.rmtree(checkpoint_folder)
     os.remove(checkpoint_name + ".tar.gz")

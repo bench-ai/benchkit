@@ -2,10 +2,11 @@ import os
 from typing import Union
 import torch
 from accelerate import Accelerator
-from accelerate.utils import FullyShardedDataParallelPlugin, ProjectConfiguration, MegatronLMPlugin, \
-    GradientAccumulationPlugin, DeepSpeedPlugin
+from accelerate.utils import FullyShardedDataParallelPlugin, ProjectConfiguration, MegatronLMPlugin, DeepSpeedPlugin, \
+    GradientAccumulationPlugin
 
-# from BenchKit.NeuralNetworks.evaluator import Evaluator
+from BenchKit.tracking.config import Config
+from BenchKit.tracking.save import upload_model_save, upload_model_state
 
 
 class BenchAccelerator(Accelerator):
@@ -50,30 +51,55 @@ class BenchAccelerator(Accelerator):
                          kwargs_handlers=kwargs_handlers)
 
     def save_state(self,
-                   pin_value: float = None,
-                   evaluator: Evaluator = None,
+                   evaluation_value: float | None = None,
+                   config: Config | None = None,
                    **save_model_func_kwargs):
 
-        if not pin_value:
-            raise ValueError("pin_value must be provided")
+        if not evaluation_value:
+            raise ValueError("evaluation_value must be provided")
 
-        if not evaluator:
+        if not config:
             raise ValueError("evaluator is required to save the state to the appropriate model")
 
         save_path = os.path.join(self.project_dir, "checkpoints", f"checkpoint_{self.save_iteration}")
         current_iteration = self.save_iteration
 
+        tarfile_dir = os.path.join(self.project_dir, "tarfiles", "states")
+
+        os.makedirs(tarfile_dir, exist_ok=True)
+
         super().save_state(**save_model_func_kwargs)
 
-        # save_checkpoint(save_path, pin_value, self.save_iteration)
+        upload_model_state(save_path,
+                           tarfile_dir,
+                           current_iteration,
+                           evaluation_value,
+                           config)
 
     def save_model(self,
                    model: torch.nn.Module,
                    save_directory: Union[str, os.PathLike],
                    max_shard_size: Union[int, str] = "10GB",
-                   safe_serialization: bool = False):
+                   safe_serialization: bool = False,
+                   evaluation_value: float | None = None,
+                   config: Config | None = None):
+
+        if not evaluation_value:
+            raise ValueError("evaluation_value must be provided")
+
+        if not config:
+            raise ValueError("evaluator is required to save the state to the appropriate model")
 
         super().save_model(model,
                            save_directory,
                            max_shard_size=max_shard_size,
                            safe_serialization=safe_serialization)
+
+        tarfile_dir = os.path.join(self.project_dir, "tarfiles", "saves")
+
+        os.makedirs(tarfile_dir, exist_ok=True)
+
+        upload_model_save(save_directory,
+                          tarfile_dir,
+                          evaluation_value,
+                          config)

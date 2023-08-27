@@ -2,7 +2,6 @@ import json
 import os
 import tarfile
 
-import requests
 from colorama import Fore, Style
 import numpy as np
 from torch.utils.data import DataLoader
@@ -12,6 +11,7 @@ from tqdm import tqdm
 from BenchKit.Data.Datasets import ProcessorDataset, IterableChunk
 from BenchKit.Miscellaneous.requests.dataset import get_current_dataset, create_dataset, get_chunk_count, get_post_url, \
     delete_dataset
+from BenchKit.Miscellaneous.utils.bucket import upload_using_presigned_url
 
 megabyte = 1_024 ** 2
 gigabyte = megabyte * 1024
@@ -82,20 +82,6 @@ def remove_all_temps():
     for i in os.listdir("."):
         if i.startswith("Temp"):
             shutil.rmtree(os.path.join(".", i))
-
-
-def upload_file(url,
-                file_path,
-                save_path,
-                fields):
-    with open(file_path, 'rb') as f:
-        files = {'file': (save_path, f)}
-        http_response = requests.post(url,
-                                      data=fields,
-                                      files=files)
-
-    if http_response.status_code != 204:
-        raise RuntimeError(f"Failed to Upload {file_path}")
 
 
 def create_dataset_zips(processed_dataset: ProcessorDataset,
@@ -183,10 +169,10 @@ def run_upload(dataset_name: str):
                                 file_count)
 
         resp = json.loads(response.content)
-        upload_file(resp["url"],
-                    path,
-                    os.path.split(path)[-1],
-                    resp["fields"])
+        upload_using_presigned_url(resp["url"],
+                                   path,
+                                   os.path.split(path)[-1],
+                                   resp["fields"])
 
         ds = get_current_dataset(dataset_name)
 

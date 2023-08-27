@@ -7,7 +7,7 @@ import gzip
 import shutil
 import requests
 from BenchKit.NeuralNetworks.Helpers import create_model_dir
-from BenchKit.tracking.Visualizer import display_all_configs
+from BenchKit.tracking.visualizer import display_all_configs
 from BenchKit.Train.Helpers import write_script
 from .Settings import convert_timestamp
 from .Verbose import verbose_logo, get_version
@@ -20,7 +20,7 @@ from BenchKit.Miscellaneous.requests.server import get_logs, get_experiments, ki
 from BenchKit.Miscellaneous.requests.dataset import get_dataset_list, delete_dataset
 from tabulate import tabulate
 from tqdm import tqdm
-from BenchKit.Miscellaneous.MakeTar import extract_tar
+from BenchKit.Miscellaneous.utils.tar import extract_tar
 
 
 def create_dataset():
