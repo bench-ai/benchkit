@@ -1,4 +1,4 @@
-from BenchKit.Miscellaneous.User import make_time_series_graph, plot_time_series_point
+from ...Miscellaneous.requests.graph import plot_time_series_point, make_time_series_graph
 import concurrent.futures
 from .base_graph import BenchGraph
 from BenchKit.tracking.config import Config

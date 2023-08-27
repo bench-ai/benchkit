@@ -1,4 +1,4 @@
-from BenchKit.Miscellaneous.User import init_config
+from BenchKit.Miscellaneous.requests.server import init_config
 
 
 class Config:

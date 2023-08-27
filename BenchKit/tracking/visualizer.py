@@ -1,4 +1,5 @@
-from BenchKit.Miscellaneous.User import get_all_configs, get_all_graphs, get_time_series_points
+from BenchKit.Miscellaneous.requests.server import get_all_configs
+from BenchKit.Miscellaneous.requests.graph import get_all_graphs, get_time_series_points
 from tabulate import tabulate
 import pandas as pd
 import concurrent.futures

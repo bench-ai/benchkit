@@ -1,4 +1,4 @@
-from BenchKit.tracking.graphers.BaseGraph import BenchGraph
+from BenchKit.tracking.graphs.base_graph import BenchGraph
 from .accelerate import BenchAccelerator
 from .tracking.bench_tracker import BenchTracker
 from datetime import timezone

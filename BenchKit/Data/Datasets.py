@@ -10,7 +10,7 @@ from typing import final
 import shutil
 from BenchKit.Data.FileSaver import BaseFile, TextFile, BooleanFile, NumpyFile, JsonFile, TorchFile, NumericFile, \
     RawFile
-from BenchKit.Miscellaneous.User import get_get_url, get_current_dataset, get_ds_chunks
+from BenchKit.Miscellaneous.requests.dataset import get_current_dataset, get_get_url, get_ds_chunks
 import warnings
 
 

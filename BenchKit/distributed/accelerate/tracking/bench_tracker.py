@@ -1,7 +1,7 @@
 from accelerate.tracking import GeneralTracker, on_main_process
 import concurrent.futures
 
-from BenchKit.tracking.graphers.BaseGraph import BenchGraph
+from BenchKit.tracking.graphs.base_graph import BenchGraph
 
 
 class BenchTracker(GeneralTracker):

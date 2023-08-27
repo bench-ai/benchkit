@@ -10,8 +10,8 @@ import shutil
 import pathlib
 from tqdm import tqdm
 from BenchKit.Data.Datasets import ProcessorDataset, IterableChunk
-from BenchKit.Miscellaneous.User import create_dataset, get_post_url, \
-    delete_dataset, get_current_dataset, get_chunk_count
+from BenchKit.Miscellaneous.requests.dataset import get_current_dataset, create_dataset, get_chunk_count, get_post_url, \
+    delete_dataset
 
 megabyte = 1_024 ** 2
 gigabyte = megabyte * 1024

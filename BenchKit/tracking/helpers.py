@@ -4,7 +4,7 @@ import tarfile
 from accelerate import Accelerator
 from BenchKit.Data.Helpers import upload_file
 from accelerate.tracking import on_main_process
-from BenchKit.Miscellaneous.User import post_checkpoint_url
+from BenchKit.Miscellaneous.requests.model_save import post_checkpoint_url
 
 
 def upload_model_checkpoint(acc: Accelerator,

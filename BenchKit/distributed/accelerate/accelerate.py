@@ -5,7 +5,7 @@ from accelerate import Accelerator
 from accelerate.utils import FullyShardedDataParallelPlugin, ProjectConfiguration, MegatronLMPlugin, \
     GradientAccumulationPlugin, DeepSpeedPlugin
 
-from BenchKit.NeuralNetworks.evaluator import Evaluator
+# from BenchKit.NeuralNetworks.evaluator import Evaluator
 
 
 class BenchAccelerator(Accelerator):

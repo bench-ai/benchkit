@@ -13,9 +13,11 @@ from .Settings import convert_timestamp
 from .Verbose import verbose_logo, get_version
 import argparse
 import pandas as pd
-from .User import get_user_project, get_dataset_list, get_versions, get_checkpoint_url, test_login, \
-    list_all_checkpoints, delete_checkpoints, delete_dataset, delete_version, pull_project_code, kill_server, \
-    get_experiments, get_logs
+from BenchKit.Miscellaneous.requests.user import get_user_project, test_login
+from BenchKit.Miscellaneous.requests.model_save import get_checkpoint_url, delete_checkpoints, list_all_checkpoints
+from BenchKit.Miscellaneous.requests.version import delete_version, get_versions, pull_project_code
+from BenchKit.Miscellaneous.requests.server import get_logs, get_experiments, kill_server
+from BenchKit.Miscellaneous.requests.dataset import get_dataset_list, delete_dataset
 from tabulate import tabulate
 from tqdm import tqdm
 from BenchKit.Miscellaneous.MakeTar import extract_tar
