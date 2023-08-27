@@ -7,7 +7,7 @@ import gzip
 import shutil
 import requests
 from BenchKit.NeuralNetworks.Helpers import create_model_dir
-from BenchKit.Tracking.Visualizer import display_all_configs
+from BenchKit.tracking.Visualizer import display_all_configs
 from BenchKit.Train.Helpers import write_script
 from .Settings import convert_timestamp
 from .Verbose import verbose_logo, get_version

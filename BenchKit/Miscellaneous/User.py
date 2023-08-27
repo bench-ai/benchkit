@@ -418,7 +418,9 @@ def get_experiments(page: int,
     return json.loads(response.content)
 
 
-def init_config(params: dict):
+def init_config(params: dict,
+                evaluation_criteria: str):
+
     instance_id = os.getenv("INSTANCE_ID")
 
     request_url = os.path.join(get_main_url(),
@@ -430,7 +432,8 @@ def init_config(params: dict):
     response = request_executor("post",
                                 url=request_url,
                                 json={"instance_id": instance_id,
-                                      "parameters": params})
+                                      "parameters": params,
+                                      "evaluation_criteria": evaluation_criteria})
 
     response_dict = json.loads(response.content)
 
