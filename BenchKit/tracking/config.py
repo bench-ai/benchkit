@@ -1,6 +1,9 @@
 import os
 from pathlib import Path
-from BenchKit.tracking.save import upload_model_state, upload_model_save
+
+from BenchKit.Miscellaneous.requests.model_save import post_model_save_presigned_url, post_model_state_presigned_url
+from BenchKit.Miscellaneous.utils.bucket import upload_using_presigned_url
+from BenchKit.Miscellaneous.utils.tar import tar_gzip_folder
 from BenchKit.Miscellaneous.requests.server import init_config
 from typing import Callable
 
@@ -45,6 +48,74 @@ class Config:
 
         self.config_save_path = Path(__file__).resolve().parent.parent / root_folder_name / config_folder_name
         self.create_checkpoint_and_save_directory()
+
+    def upload_model_state(self,
+                           state_folder_path: str,
+                           tar_save_location: str,
+                           iteration: int,
+                           evaluation_value: float) -> None:
+        """
+        Uploads model_state to Bench AI central repository
+
+        :param state_folder_path: Path to the folder where the state is saved
+        :type state_folder_path: str
+        :param tar_save_location: Path where the tar file should be saved
+        :type tar_save_location: str
+        :param iteration: current state iteration
+        :type iteration: int
+        :param evaluation_value: float value in the respect to the config evaluation criteria
+        :type evaluation_value: float
+        """
+
+        file_name = f"bench-{self.config_id}-{iteration}-{self.evaluation_criteria}.tar.gz"
+
+        tar_save_path = tar_gzip_folder(file_name,
+                                        state_folder_path,
+                                        tar_save_location)
+
+        tar_size_bytes = os.path.getsize(tar_save_path)
+
+        presigned_post_url = post_model_state_presigned_url(self.config_id,
+                                                            iteration,
+                                                            evaluation_value,
+                                                            tar_size_bytes)
+
+        upload_using_presigned_url(presigned_post_url["url"],
+                                   tar_save_path,
+                                   os.path.basename(tar_save_path),
+                                   fields=presigned_post_url["fields"])
+
+    def upload_model_save(self,
+                          save_folder_path: str,
+                          tar_save_location: str,
+                          evaluation_value: float) -> None:
+        """
+        Uploads model_save to Bench AI central repository
+
+        :param save_folder_path: Path to the folder where the state is saved
+        :type save_folder_path: str
+        :param tar_save_location: Path where the tar file should be saved
+        :type tar_save_location: str
+        :param evaluation_value: float value in the respect to the config evaluation criteria
+        :type evaluation_value: float
+        """
+
+        file_name = f"bench-{self.config_id}-save-{self.evaluation_criteria}.tar.gz"
+
+        tar_save_path = tar_gzip_folder(file_name,
+                                        save_folder_path,
+                                        tar_save_location)
+
+        tar_size_bytes = os.path.getsize(tar_save_path)
+
+        presigned_post_url = post_model_save_presigned_url(self.config_id,
+                                                           tar_size_bytes,
+                                                           evaluation_value)
+
+        upload_using_presigned_url(presigned_post_url["url"],
+                                   tar_save_path,
+                                   os.path.basename(tar_save_path),
+                                   fields=presigned_post_url["fields"])
 
     def create_checkpoint_and_save_directory(self) -> None:
         """
@@ -107,11 +178,10 @@ class Config:
         if not os.path.isdir(state_dir_path):
             raise RuntimeError(f"Function {save_func.__name__} did not return a path to a valid directory")
 
-        upload_model_state(state_dir_path,
-                           os.path.join(self.config_save_path, "checkpoints"),
-                           iteration,
-                           evaluation_value,
-                           self)
+        self.upload_model_state(state_dir_path,
+                                os.path.join(self.config_save_path, "checkpoints"),
+                                iteration,
+                                evaluation_value)
 
     def save_and_upload_save(self,
                              save_func: Callable[..., str],
@@ -130,10 +200,9 @@ class Config:
         if not os.path.isdir(save_dir_path):
             raise RuntimeError(f"Function {save_func.__name__} did not return a path to a valid directory")
 
-        upload_model_save(save_dir_path,
-                          os.path.join(self.config_save_path, "save"),
-                          evaluation_value,
-                          self)
+        self.upload_model_save(save_dir_path,
+                               os.path.join(self.config_save_path, "save"),
+                               evaluation_value)
 
         self.best_evaluation_value = evaluation_value
 

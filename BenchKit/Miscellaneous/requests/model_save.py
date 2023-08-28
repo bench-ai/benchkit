@@ -2,16 +2,15 @@ import json
 import os
 from BenchKit.Miscellaneous.Settings import get_main_url
 from .user import request_executor
-from BenchKit.tracking.config import Config
 
 
-def post_model_save_presigned_url(config: Config,
+def post_model_save_presigned_url(config_id: str,
                                   size_bytes: int,
                                   evaluation_criteria_value: float) -> dict:
     """
         POST method, gets the user a presigned url to upload their model save
-        :param config: The Tracker Config
-        :type config: Config
+        :param config_id: The tracker `Config` id
+        :type config_id: str
         :param evaluation_criteria_value: value of the criteria specified in `config`
         :type evaluation_criteria_value: float
         :param size_bytes:
@@ -33,7 +32,7 @@ def post_model_save_presigned_url(config: Config,
     response = request_executor("post",
                                 url=request_url,
                                 json={
-                                    "config": config.config_id,
+                                    "config": config_id,
                                     "evaluation_criteria_value": evaluation_criteria_value,
                                     "size_bytes": size_bytes
                                 })
@@ -41,15 +40,14 @@ def post_model_save_presigned_url(config: Config,
     return json.loads(response.content)
 
 
-def post_model_state_presigned_url(config: Config,
+def post_model_state_presigned_url(config_id: str,
                                    iteration: int,
                                    evaluation_criteria_value: float,
                                    size_bytes: int) -> dict:
-
     """
     POST method, gets the user a presigned url to upload their model state
-    :param config: The Tracker Config
-    :type config: Config
+    :param config_id: The tracker `Config` id
+    :type config_id: str
     :param iteration: The state iteration (Epoch, batch #, ...)
     :type iteration: int
     :param evaluation_criteria_value: value of the criteria specified in `config`
@@ -73,7 +71,7 @@ def post_model_state_presigned_url(config: Config,
     response = request_executor("post",
                                 url=request_url,
                                 json={
-                                    "config": config.config_id,
+                                    "config": config_id,
                                     "iteration": iteration,
                                     "evaluation_criteria_value": evaluation_criteria_value,
                                     "size_bytes": size_bytes
