@@ -7,7 +7,7 @@ from BenchKit.Miscellaneous.Settings import get_main_url
 
 
 class AuthenticatedUser:
-    cred_path = Path(__file__).resolve().parent / "credentials.json"
+    cred_path = Path(__file__).resolve().parent.parent / "credentials.json"
 
     def __init__(self):
         self.cred_dict = {}
