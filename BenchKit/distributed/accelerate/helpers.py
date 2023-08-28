@@ -1,6 +1,6 @@
 from BenchKit.tracking.graphs.base_graph import BenchGraph
-from .accelerate import BenchAccelerator
 from .tracking.bench_tracker import BenchTracker
+from accelerate.accelerator import Accelerator
 from datetime import timezone
 from typing import Any
 import datetime
@@ -8,7 +8,7 @@ import os
 
 
 def get_bench_accelerator(*args,
-                          **kwargs) -> tuple[BenchAccelerator, ...]:
+                          **kwargs) -> tuple[Accelerator, ...]:
 
     """
     Prepares all relevant objects and initializes a bench accelerator
@@ -19,14 +19,14 @@ def get_bench_accelerator(*args,
     :rtype: BenchAccelerator, Any
     """
 
-    acc = BenchAccelerator(**kwargs)
+    acc = Accelerator(**kwargs)
 
     return acc, *acc.prepare(*args)
 
 
 def get_accelerator_with_bench_tracker(graph_list: list[BenchGraph],
                                        *args,
-                                       **kwargs) -> tuple[BenchAccelerator, Any]:
+                                       **kwargs) -> tuple[Accelerator, Any]:
 
     """
     Gets a BenchAccelerator initialized with the bench tracker

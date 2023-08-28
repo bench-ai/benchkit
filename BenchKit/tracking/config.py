@@ -161,3 +161,5 @@ class Config:
         if self.should_save(evaluation_value):
             self.save_and_upload_save(save_model_func,
                                       evaluation_value)
+
+            assert self.best_evaluation_value == evaluation_value
