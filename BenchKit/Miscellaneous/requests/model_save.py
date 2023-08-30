@@ -32,7 +32,7 @@ def post_model_save_presigned_url(config_id: str,
     response = request_executor("post",
                                 url=request_url,
                                 json={
-                                    "config": config_id,
+                                    "tracker_config_id": config_id,
                                     "evaluation_criteria_value": evaluation_criteria_value,
                                     "size_bytes": size_bytes
                                 })
@@ -71,7 +71,7 @@ def post_model_state_presigned_url(config_id: str,
     response = request_executor("post",
                                 url=request_url,
                                 json={
-                                    "config": config_id,
+                                    "tracker_config_id": config_id,
                                     "iteration": iteration,
                                     "evaluation_criteria_value": evaluation_criteria_value,
                                     "size_bytes": size_bytes
