@@ -176,7 +176,7 @@ class Config:
         state_dir_path: str = save_func()
 
         if not os.path.isdir(state_dir_path):
-            raise RuntimeError(f"Function {save_func.__name__} did not return a path to a valid directory")
+            raise RuntimeError(f"save state function did not return a path to a valid directory")
 
         self.upload_model_state(state_dir_path,
                                 os.path.join(self.config_save_path, "checkpoints"),
@@ -198,7 +198,7 @@ class Config:
         save_dir_path: str = save_func()
 
         if not os.path.isdir(save_dir_path):
-            raise RuntimeError(f"Function {save_func.__name__} did not return a path to a valid directory")
+            raise RuntimeError(f"save function did not return a path to a valid directory")
 
         self.upload_model_save(save_dir_path,
                                os.path.join(self.config_save_path, "save"),
