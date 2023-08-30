@@ -144,7 +144,7 @@ class Config:
 
         :param iteration:
         """
-        if self.last_iteration < iteration:
+        if self.last_iteration > iteration:
             raise ValueError(f"provided iteration: {iteration}, is less than last iteration {self.last_iteration}")
         else:
             self._last_iteration = iteration
