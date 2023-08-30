@@ -227,7 +227,11 @@ class Config:
                                    iteration,
                                    evaluation_value)
 
-        if self.should_save(evaluation_value):
+        if self.best_evaluation_value is None:
+            self.save_and_upload_save(save_model_func,
+                                      evaluation_value)
+
+        elif self.should_save(evaluation_value):
             self.save_and_upload_save(save_model_func,
                                       evaluation_value)
 
