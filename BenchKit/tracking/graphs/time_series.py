@@ -24,6 +24,8 @@ class TimeSeries(BenchGraph):
         self.y_axis_name = y_axis_name
         self.graph_id = None
 
+        self.init_graph()
+
     def init_graph(self):
         graph_id = make_time_series_graph(self.config_id,
                                           self.graph_name,
