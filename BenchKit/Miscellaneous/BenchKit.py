@@ -1,20 +1,19 @@
 import json
 import os
-import tarfile
 import time
 from pathlib import Path
-import gzip
-import shutil
+
 import requests
+
+from BenchKit.Miscellaneous.cli.server import display_table, show_and_download_checkpoints, download_model_save, \
+    display_tracker_config_plots
 from BenchKit.NeuralNetworks.Helpers import create_model_dir
-from BenchKit.tracking.visualizer import display_all_configs
 from BenchKit.Train.Helpers import write_script
 from .Settings import convert_timestamp
 from .Verbose import verbose_logo, get_version
 import argparse
 import pandas as pd
 from BenchKit.Miscellaneous.requests.user import get_user_project, test_login
-from BenchKit.Miscellaneous.requests.model_save import get_checkpoint_url, delete_checkpoints, list_all_checkpoints
 from BenchKit.Miscellaneous.requests.version import delete_version, get_versions, pull_project_code
 from BenchKit.Miscellaneous.requests.server import get_logs, get_experiments, kill_server
 from BenchKit.Miscellaneous.requests.dataset import get_dataset_list, delete_dataset
@@ -102,26 +101,6 @@ def show_project():
     print(tabulate(df, headers='keys', tablefmt='psql'))
 
 
-def show_checkpoints():
-    checkpoint_dict = list_all_checkpoints()
-
-    if not checkpoint_dict:
-        raise ValueError("No checkpoints have been uploaded")
-
-    df = pd.DataFrame(data=checkpoint_dict)
-
-    df["creation_timestamp"] = df["creation_timestamp"].apply(convert_timestamp)
-    df["update_timestamp"] = df["update_timestamp"].apply(convert_timestamp)
-
-    id_col = df["id"].values
-
-    df = df.drop(columns=['id'])
-
-    print(tabulate(df, headers='keys', tablefmt='psql'))
-
-    return df, id_col
-
-
 def show_datasets():
     dataset_dict = get_dataset_list()
 
@@ -146,37 +125,6 @@ def del_datasets():
     _, id_col = show_datasets()
     dataset_number = int(input("Enter the number of the dataset you wish to delete: "))
     delete_dataset(id_col[dataset_number])
-
-
-def del_checkpoint():
-    _, id_col = show_checkpoints()
-    checkpoint_number = int(input("Enter the number of the checkpoint you wish to delete: "))
-
-    delete_checkpoints(id_col[checkpoint_number])
-
-
-def get_checkpoint():
-    checkpoint_df, id_col = show_checkpoints()
-    checkpoint_number = int(input("Enter the number of the checkpoint you wish to pull: "))
-
-    row = checkpoint_df.iloc[checkpoint_number]
-
-    request = get_checkpoint_url(id_col[checkpoint_number])
-
-    mem_zip = requests.get(request)
-
-    with open(f"{row['checkpoint_name']}.tar.gz", 'wb') as f:
-        f.write(mem_zip.content)
-
-    with gzip.open(f"{row['checkpoint_name']}.tar.gz", 'rb') as f_in:
-        with open(f"{row['checkpoint_name']}.tar", 'wb') as f_out:
-            shutil.copyfileobj(f_in, f_out)
-
-    with tarfile.open(f"{row['checkpoint_name']}.tar", 'r') as tar:
-        tar.extractall()
-
-    os.remove(f"{row['checkpoint_name']}.tar.gz")
-    os.remove(f"{row['checkpoint_name']}.tar")
 
 
 def pull_version(version: int):
@@ -209,7 +157,6 @@ def show_experiments(version=None,
         next_page = experiment_dict["next_page"]
 
         if not server_dict:
-
             val_err_str = f"No Experiments have been run for version: {version if version else 1}"
 
             if state:
@@ -247,25 +194,35 @@ def show_experiments(version=None,
 
         print("\n")
 
-        pr_str = "Enter the number of the Experiment log you wish to see. "
-
         if n_valid:
-            pr_str += "Type 'n' to move to the next page. "
+            print("- Type 'n' to move to the next page.")
 
         if p_valid:
-            pr_str += "Type 'p' to move to the previous page. "
+            print("- Type 'p' to move to the previous page.")
 
-        str_inp = input(pr_str[:-2] + ": ")
+        print("- To see a server's logs, type '<server #> l'")
+        print("- To see a server's Tracker Config, type '<server #> t'")
 
-        if str_inp.lower() == "n" and n_valid:
+        str_inp = input("Enter: ")
+
+        if str_inp.lower().startswith("n") and n_valid:
             page += 1
-        elif str_inp.lower() == "p" and p_valid:
+        elif str_inp.lower().startswith("p") and p_valid:
             page -= 1
         else:
 
+            server_num, char = str_inp.split(" ")
+            num = int(server_num)
+
             try:
-                num = int(str_inp)
-                show_options(instance_series[num])
+                if char == "l":
+                    show_logs(instance_series[num])
+                elif char == "t":
+                    show_model_runs(evaluation_criteria=0,
+                                    sort_by="update_time",
+                                    ascending=True,
+                                    running=None,
+                                    server_id=instance_series[num])
 
             except (TypeError, ValueError):
                 pass
@@ -273,13 +230,93 @@ def show_experiments(version=None,
             ext = True
 
 
-def show_options(instance_id: str):
-    inp = input("Type 1 to see logs and 2 to see configs: ")
+def show_model_runs(evaluation_criteria: str | int,
+                    sort_by: str,
+                    ascending: bool,
+                    running: bool | None = None,
+                    server_id: bool | None = None):
 
-    if inp == "1":
-        show_logs(instance_id)
-    elif inp == "2":
-        display_all_configs(instance_id)
+    generator = display_table(evaluation_criteria,
+                              sort_by,
+                              ascending=ascending,
+                              running=running,
+                              server_id=server_id)
+
+    infinite = True
+    first_iter = True
+    send_flag = False
+
+    (rows, model_state_list, model_save_list, server_id_list, tracker_config_id_list, next_page,
+     headers) = next(generator)
+
+    count = 0
+
+    while infinite:
+
+        print_list = [" - To see a TrackerConfig's states, type '<config #> s'\n",
+                      "- To see a TrackerConfig's save, type '<config #> v'\n",
+                      "- To see a TrackerConfig's metrics, type '<config #> m'\n"]
+
+        if next_page != 2 and (not first_iter):
+            print_list.append("- Type 'p' to go to the previous page.\n")
+
+        if not first_iter:
+            (rows, model_state_list, model_save_list, server_id_list, tracker_config_id_list, next_page,
+             headers) = generator.send(send_flag)
+
+            if send_flag:
+                count += len(tracker_config_id_list)
+            else:
+                count -= len(tracker_config_id_list)
+        else:
+            first_iter = False
+
+        if next_page is not None:
+            print_list.append("- Type 'n' to go to the next page.\n")
+
+        index = list(range(count, len(tracker_config_id_list) + count))
+
+        df = pd.DataFrame(rows, columns=headers, index=index)
+        table = tabulate(df, headers='keys', tablefmt='psql', showindex=True)
+        print(table)
+
+        for i in print_list:
+            print(i, end=" ")
+
+        char = input("\nEnter: ")
+
+        if char.startswith("p"):
+            send_flag = False
+        elif char.startswith("n"):
+            send_flag = True
+        elif len(char.split(" ")) == 2:
+            config_num, mode = char.split(" ")
+            config_num = int(config_num)
+            if (config_num > max(index)) or (config_num < min(index)):
+                raise IndexError("Index out of bounds")
+
+            match mode:
+                case 's':
+                    if len(model_state_list[config_num - count]) > 1:
+                        show_and_download_checkpoints(model_state_list[config_num - count],
+                                                      rows[config_num - count]["experiment_name"])
+                    else:
+                        print("No model states are present")
+
+                case 'v':
+                    if model_save_list[config_num - count]:
+                        download_model_save(model_save_list[config_num - count]["id"],
+                                            rows[config_num - count]["experiment_name"])
+                    else:
+                        print("No model saves are present")
+                case 'm':
+                    display_tracker_config_plots(tracker_config_id_list[config_num - count])
+                case _:
+                    raise ValueError(f"Valid modes are only s v m")
+
+            infinite = False
+        else:
+            infinite = False
 
 
 def show_logs(instance_id: str):
@@ -360,15 +397,6 @@ def main():
 
     if args.action == "logout":
         logout()
-
-    if args.action == "get-check":
-        get_checkpoint()
-
-    if args.action == "del-check":
-        del_checkpoint()
-
-    if args.action == "show-check":
-        show_checkpoints()
 
     if args.action == "show-ds":
         show_datasets()

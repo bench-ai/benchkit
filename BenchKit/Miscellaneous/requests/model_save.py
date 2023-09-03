@@ -25,6 +25,7 @@ def post_model_save_presigned_url(config_id: str,
     request_url = os.path.join(get_main_url(),
                                "api",
                                "tracking",
+                               "bk",
                                "model",
                                "save",
                                "file")
@@ -64,6 +65,7 @@ def post_model_state_presigned_url(config_id: str,
     request_url = os.path.join(get_main_url(),
                                "api",
                                "tracking",
+                               "bk",
                                "model",
                                "state",
                                "file")
@@ -80,57 +82,55 @@ def post_model_state_presigned_url(config_id: str,
     return json.loads(response.content)
 
 
-def get_checkpoint_url(checkpoint_id):
-    request_url = os.path.join(get_main_url(), "api", "tracking", "upload", "checkpoint")
+def get_model_state_presigned_url(model_state_id: str) -> dict:
+    """
+    A get request that returns an url to the model state the user wishes to get
+
+    :param model_state_id:
+    :return: dict
+        {url: (str)}
+    """
+
+    request_url = os.path.join(get_main_url(),
+                               "api",
+                               "tracking",
+                               "bk",
+                               "model",
+                               "state",
+                               "file")
 
     response = request_executor("get",
                                 url=request_url,
                                 params={
-                                    "checkpoint_id": checkpoint_id
+                                    "model_state_id": model_state_id
                                 })
 
     return json.loads(response.content)
 
 
-def post_checkpoint_url(checkpoint_name: str):
-    if not checkpoint_name.endswith(".tar.gz"):
-        raise ValueError("Checkpoint must be a tar.gz")
+def get_model_save_presigned_url(model_save_id: str) -> dict:
 
-    instance_id = os.getenv("INSTANCE_ID")
-    request_url = os.path.join(get_main_url(), "api", "tracking", "upload", "checkpoint")
+    """
+    A get request that returns an url to the model state the user wishes to get
 
-    response = request_executor("post",
-                                url=request_url,
-                                json={
-                                    "checkpoint_name": checkpoint_name,
-                                    "instance_id": instance_id
-                                })
+    :param model_save_id:
+    :return: dict
+        {url: (str)}
+    """
 
-    return json.loads(response.content)
-
-
-def delete_checkpoints(checkpoint_id: str):
     request_url = os.path.join(get_main_url(),
                                "api",
                                "tracking",
-                               "list",
-                               "checkpoint")
-
-    response = request_executor("delete",
-                                url=request_url,
-                                params={"checkpoint_id": checkpoint_id})
-
-    return json.loads(response.content)
-
-
-def list_all_checkpoints():
-    request_url = os.path.join(get_main_url(),
-                               "api",
-                               "tracking",
-                               "list",
-                               "checkpoint")
+                               "bk",
+                               "model",
+                               "save",
+                               "file")
 
     response = request_executor("get",
-                                url=request_url)
+                                url=request_url,
+                                params={
+                                    "model_save_id": model_save_id
+                                })
 
     return json.loads(response.content)
+

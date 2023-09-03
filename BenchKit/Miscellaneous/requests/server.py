@@ -7,6 +7,7 @@ from .user import request_executor
 
 def get_logs(page: int,
              instance_id: str):
+
     request_url = os.path.join(get_main_url(),
                                "api",
                                "tracking",
@@ -25,6 +26,7 @@ def get_logs(page: int,
 def get_experiments(page: int,
                     version=None,
                     state=None):
+
     request_url = os.path.join(get_main_url(),
                                "api",
                                "tracking",
@@ -40,31 +42,47 @@ def get_experiments(page: int,
     return json.loads(response.content)
 
 
-def get_all_configs(instance_id: str):
+def get_all_configs(evaluation_criteria: str,
+                    sort_by: str,
+                    page: int,
+                    ascending: bool,
+                    running: bool | None = None,
+                    server_id: str | None = None):
+
+    """
+    Gets all configs in a paginated request
+
+    :param sort_by: (str options) ["update_time", "criteria", "creation_time"]
+    :param evaluation_criteria: (str)
+    :param ascending: (bool)
+    :param running: (bool | None) If True shows only model runs from active servers, if false shows models from
+            terminated servers, if None shows all servers
+    :param server_id: (str | None)
+    :param page: (int)
+
+    :return: 200 response tracker_config_data and next_page data
+    """
+
     request_url = os.path.join(get_main_url(),
                                "api",
                                "tracking",
-                               "init",
-                               "config")
+                               "bk",
+                               "all",
+                               "config",
+                               "data")
 
-    next_page = 1
-    config_list = []
-    id_list = []
+    response = request_executor("get",
+                                url=request_url,
+                                params={"server_id": server_id,
+                                        "evaluation_criteria": evaluation_criteria,
+                                        "sort_by": sort_by,
+                                        "ascending": ascending,
+                                        "running": running,
+                                        "page": page})
 
-    while next_page:
-        response = request_executor("get",
-                                    url=request_url,
-                                    params={"instance_id": instance_id,
-                                            "page": next_page})
+    response_dict = json.loads(response.content)
 
-        response_dict = json.loads(response.content)
-
-        config_list += [i["parameters"] for i in response_dict["config_list"]]
-        id_list += [i["id"] for i in response_dict["config_list"]]
-
-        next_page = response_dict["next_page"]
-
-    return config_list, id_list
+    return response_dict["tracker_config_data"], response_dict["next_page"]
 
 
 def init_config(params: dict,
@@ -97,5 +115,19 @@ def kill_server():
     response = request_executor("delete",
                                 url=request_url,
                                 params={"instance_id": instance_id})
+
+    return json.loads(response.content)
+
+
+def get_hyperparameters():
+
+    request_url = os.path.join(get_main_url(),
+                               "api",
+                               "tracking",
+                               "bk",
+                               "hyper-params")
+
+    response = request_executor("get",
+                                url=request_url)
 
     return json.loads(response.content)

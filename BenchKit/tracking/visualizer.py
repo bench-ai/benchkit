@@ -1,9 +1,5 @@
-from BenchKit.Miscellaneous.requests.server import get_all_configs
 from BenchKit.Miscellaneous.requests.graph import get_all_graphs, get_time_series_points
-from tabulate import tabulate
-import pandas as pd
 import concurrent.futures
-import matplotlib.pyplot as plt
 
 
 class Plotter:
@@ -99,7 +95,6 @@ def get_graph_n_points(config_id):
 
 
 def get_display_matrix(plot_count: int) -> tuple[int, int]:
-
     x = 1
     y = 1
     for i in range(plot_count):
@@ -110,48 +105,3 @@ def get_display_matrix(plot_count: int) -> tuple[int, int]:
                 x += 1
 
     return x, y
-
-
-def display_all_configs(instance_id):
-    p = Plotter()
-    config_list, id_list = get_all_configs(instance_id)
-
-    config_df = pd.DataFrame(data=config_list)
-
-    print(tabulate(config_df, headers='keys', tablefmt='psql', showindex=True))
-
-    loop = True
-
-    while loop:
-        inp = input("Enter the number of the model, whose graphs you wish to see. Type any other key to exit: ")
-
-        try:
-            inp = int(inp)
-            c_id = id_list[inp]
-
-            graph_list = get_graph_n_points(c_id)
-
-            rows, columns = get_display_matrix(len(graph_list))
-
-            fig, axs = plt.subplots(rows, columns, squeeze=False)
-
-            mx = max(rows, columns)
-
-            for idx, (data_dict, graph_description) in enumerate(graph_list):
-
-                x = idx // mx
-                y = idx % mx
-
-                p(graph_description["graph_type"],
-                  data_dict,
-                  graph_description,
-                  axs[x, y])
-
-            plt.show()
-
-        except ValueError:
-            loop = False
-
-
-def display_time_series():
-    pass

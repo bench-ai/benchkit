@@ -1,5 +1,8 @@
 import tarfile
 import os
+import uuid
+
+import requests
 
 
 def tar_gzip_folder(tar_name: str,
@@ -35,3 +38,16 @@ def generate_tar(tar_name: str, file_path: str):
 def extract_tar(tar_path: str, extraction_path: str):
     file = tarfile.open(tar_path)
     file.extractall(extraction_path)
+
+
+def download_file(save_location,
+                  url: str):
+
+    mem_zip = requests.get(url)
+
+    tar_save_path = f"bench-{str(uuid.uuid4())}.tar.gz"
+    with open(tar_save_path, 'wb') as f:
+        f.write(mem_zip.content)
+
+    extract_tar(tar_save_path, save_location)
+    os.remove(tar_save_path)
