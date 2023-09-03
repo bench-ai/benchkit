@@ -1,6 +1,5 @@
 from accelerate.tracking import GeneralTracker, on_main_process
 from BenchKit.tracking.graphs.base_graph import BenchGraph
-import concurrent.futures
 
 
 class BenchTracker(GeneralTracker):
@@ -22,12 +21,7 @@ class BenchTracker(GeneralTracker):
     def store_init_configuration(self,
                                  values: dict):
 
-        num_threads = 4
-
-        with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
-            future_results = [executor.submit(graph.init_graph) for graph in self.tracker_list.values()]
-
-            [future.result() for future in future_results]
+        pass
 
     @on_main_process
     def log(self,

@@ -93,6 +93,7 @@ def init_config(params: dict,
     request_url = os.path.join(get_main_url(),
                                "api",
                                "tracking",
+                               "bk",
                                "init",
                                "config")
 

@@ -1,59 +1,16 @@
 import numpy as np
 import torch
-from accelerate import Accelerator
-from BenchKit.Train.Helpers import get_accelerator, wipe_temp
-from BenchKit.Data.Helpers import get_dataset
+from BenchKit.Data.Helpers import get_dataloader
 import torch.nn as nn
 import torch.optim as opt
 from tqdm import tqdm
-from torch.utils.data import DataLoader
-
-
-def train_one_epoch(accelerate: Accelerator,
-                    train_dl: DataLoader,
-                    model,
-                    optim,
-                    loss_fn,
-                    length):
-
-    model.train()
-    for batch in tqdm(train_dl, colour="blue", total=length + 1, disable= not accelerate.is_local_main_process):
-        optim.zero_grad()
-        targets, inputs = batch
-        outputs = model(inputs)
-        targets = targets.type(torch.FloatTensor)
-        targets = targets.to(accelerate.device)
-
-        loss = loss_fn(outputs, targets)
-        accelerate.backward(loss)
-        optim.step()
-
-    wipe_temp(accelerate)
-
-
-def validate_one_epoch(accelerate: Accelerator,
-                       test_dl: DataLoader,
-                       model,
-                       loss_fn,
-                       length):
-    model.eval()
-    for batch in tqdm(test_dl, colour="blue", total=length + 1, disable= not accelerate.is_local_main_process):
-        targets, inputs = batch
-        outputs = model(inputs)
-        targets = targets.type(torch.FloatTensor)
-        targets = targets.to(accelerate.device)
-        loss: torch.Tensor = loss_fn(outputs, targets)
-        full_loss: torch.Tensor = accelerate.gather_for_metrics(loss)
-
-        if accelerate.is_local_main_process:
-            print(accelerate.process_index, full_loss.size(), full_loss)
-
-    wipe_temp(accelerate)
 
 
 def main():
 
-    acc: Accelerator = get_accelerator()
+    """
+    In this method training of your model should take place
+    """
 
 
 if __name__ == '__main__':

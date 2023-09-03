@@ -58,7 +58,6 @@ def write_manager():
 
 
 def write_dependency():
-    # template_path = Path(__file__).resolve().parent / "dependencies.txt"
 
     if not os.path.isfile("dependencies.txt"):
         with open("dependencies.txt", "w") as read_file:
@@ -235,7 +234,6 @@ def show_model_runs(evaluation_criteria: str | int,
                     ascending: bool,
                     running: bool | None = None,
                     server_id: bool | None = None):
-
     generator = display_table(evaluation_criteria,
                               sort_by,
                               ascending=ascending,
@@ -356,10 +354,9 @@ def main():
 
     parser.add_argument("action",
                         choices=["start-project", "logout",
-                                 "get-check", "del-check", "show-check",
                                  "show-ds", "del-ds", "project-info",
                                  "show-vs", "del-vs", "pull-vs",
-                                 "stop-svr", "show-ex"],
+                                 "stop-svr", "show-ex", "show-runs"],
                         nargs="?",
                         default=None)
 
@@ -388,6 +385,25 @@ def main():
     parser.add_argument("-cv",
                         "--code_version",
                         type=int,
+                        required=False)
+
+    parser.add_argument("-sb",
+                        "--sort_by",
+                        default="update_time",
+                        choices=['update_time', 'criteria', 'creation_time'])
+
+    parser.add_argument("-run",
+                        "--running",
+                        choices=["None", 'True', 'False'],
+                        default="None")
+
+    parser.add_argument("-asc",
+                        "--ascending",
+                        action="store_true")
+
+    parser.add_argument("-sid",
+                        "--server_id",
+                        type=str,
                         required=False)
 
     args = parser.parse_args()
@@ -441,6 +457,19 @@ def main():
     if args.action == "show-ex":
         show_experiments(args.code_version,
                          args.state)
+
+    if args.action == "show-runs":
+
+        if not args.input_value:
+            raise ValueError("Evaluation Criteria was not provided")
+        else:
+            eval_crit = args.input_value
+
+        show_model_runs(eval_crit,
+                        args.sb,
+                        args.asc,
+                        running=eval(args.run),
+                        server_id=args.sid)
 
 
 if __name__ == '__main__':
