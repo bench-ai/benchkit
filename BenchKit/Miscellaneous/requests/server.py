@@ -47,7 +47,7 @@ def get_all_configs(evaluation_criteria: str,
                     page: int,
                     ascending: bool,
                     running: bool | None = None,
-                    server_id: str | None = None):
+                    server_id: str | None = None) -> tuple[dict, str | None]:
 
     """
     Gets all configs in a paginated request
@@ -61,6 +61,16 @@ def get_all_configs(evaluation_criteria: str,
     :param page: (int)
 
     :return: 200 response tracker_config_data and next_page data
+        tracker_config_data
+            {"creation_timestamp": str(timestamp),
+             "id": str,
+             "parameters: dict,
+             "server" str,
+             "evaluation_criteria" str,
+             "model_state": list[dict],
+             "model_save": dict,
+             "experiment_name": str,
+             "version": int}
     """
 
     request_url = os.path.join(get_main_url(),
@@ -86,7 +96,14 @@ def get_all_configs(evaluation_criteria: str,
 
 
 def init_config(params: dict,
-                evaluation_criteria: str):
+                evaluation_criteria: str) -> str:
+
+    """
+
+    :param params: The hyperparameters you wish to track
+    :param evaluation_criteria: The evaluation criteria the model is judged on
+    :return: the id of the config
+    """
 
     instance_id = os.getenv("INSTANCE_ID")
 
@@ -120,7 +137,16 @@ def kill_server():
     return json.loads(response.content)
 
 
-def get_hyperparameters():
+def get_hyperparameters() -> dict:
+
+    """
+    Gets all hyperparmeters and evaluation criteria associated with this project
+
+    :return: gets all hyperparameters and evaluation criterion associated with a project
+    {"parameter_list": list(str),
+     "evaluation_criteria_list: list(str),
+     "project_id": str}
+    """
 
     request_url = os.path.join(get_main_url(),
                                "api",

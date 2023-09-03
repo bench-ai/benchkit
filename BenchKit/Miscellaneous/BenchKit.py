@@ -5,7 +5,7 @@ from pathlib import Path
 
 import requests
 
-from BenchKit.Miscellaneous.cli.server import display_table, show_and_download_checkpoints, download_model_save, \
+from BenchKit.Miscellaneous.cli.server import ModelRuns, ModelState, download_model_save, \
     display_tracker_config_plots
 from BenchKit.NeuralNetworks.Helpers import create_model_dir
 from BenchKit.Train.Helpers import write_script
@@ -58,9 +58,8 @@ def write_manager():
 
 
 def write_dependency():
-
     if not os.path.isfile("dependencies.txt"):
-        with open("dependencies.txt", "w") as read_file:
+        with open("dependencies.txt", "w"):
             pass
 
 
@@ -233,12 +232,22 @@ def show_model_runs(evaluation_criteria: str | int,
                     sort_by: str,
                     ascending: bool,
                     running: bool | None = None,
-                    server_id: bool | None = None):
-    generator = display_table(evaluation_criteria,
-                              sort_by,
-                              ascending=ascending,
-                              running=running,
-                              server_id=server_id)
+                    server_id: str | None = None) -> None:
+    """
+    Shows all Model Runs in a tabular form
+
+    :param evaluation_criteria: The criteria used to evaluate your model, defined in the tracker config
+    :param sort_by: The field to sort the query by options ["update_time", "creation_time", "criteria"]
+    :param ascending: Whether the query should be sorted in ascending or descending order
+    :param running: If True shows running models, if False shows models on not running servers, None shows all
+    :param server_id: If present only show runs in relation to this server
+    """
+
+    generator = ModelRuns.get_model_runs_table_contents(evaluation_criteria,
+                                                        sort_by,
+                                                        ascending=ascending,
+                                                        running=running,
+                                                        server_id=server_id)
 
     infinite = True
     first_iter = True
@@ -296,8 +305,8 @@ def show_model_runs(evaluation_criteria: str | int,
             match mode:
                 case 's':
                     if len(model_state_list[config_num - count]) > 1:
-                        show_and_download_checkpoints(model_state_list[config_num - count],
-                                                      rows[config_num - count]["experiment_name"])
+                        ModelState.show_and_download_states(model_state_list[config_num - count],
+                                                            rows[config_num - count]["experiment_name"])
                     else:
                         print("No model states are present")
 
@@ -466,10 +475,10 @@ def main():
             eval_crit = args.input_value
 
         show_model_runs(eval_crit,
-                        args.sb,
-                        args.asc,
-                        running=eval(args.run),
-                        server_id=args.sid)
+                        args.sort_by,
+                        args.ascending,
+                        running=eval(args.running),
+                        server_id=args.server_id)
 
 
 if __name__ == '__main__':

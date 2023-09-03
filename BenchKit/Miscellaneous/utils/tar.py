@@ -1,7 +1,6 @@
 import tarfile
 import os
 import uuid
-
 import requests
 
 
@@ -28,20 +27,19 @@ def tar_gzip_folder(tar_name: str,
     return tar_save_path
 
 
-def generate_tar(tar_name: str, file_path: str):
-    with tarfile.open(f"{tar_name}.tar.gz", "w:gz") as tar:
-        tar.add(file_path, arcname=os.path.split(file_path)[-1])
-
-    return f"{tar_name}.tar.gz"
-
-
 def extract_tar(tar_path: str, extraction_path: str):
     file = tarfile.open(tar_path)
     file.extractall(extraction_path)
 
 
-def download_file(save_location,
-                  url: str):
+def download_file(save_location: str,
+                  url: str) -> None:
+
+    """
+
+    :param save_location: Where the downloaded file would be saved
+    :param url: the url used to download the tar file
+    """
 
     mem_zip = requests.get(url)
 
