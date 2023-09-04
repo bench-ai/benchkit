@@ -3,13 +3,12 @@ import os
 
 from BenchKit.Data.Helpers import create_dataset_zips, test_dataloading, run_upload
 from Datasets.ProjectDatasets import main
-from BenchKit.Miscellaneous.MakeTar import generate_tar
-from BenchKit.Miscellaneous.User import upload_project_code
-from BenchKit.Data.Helpers import upload_file
+from BenchKit.Miscellaneous.utils.tar import generate_tar
+from BenchKit.Miscellaneous.requests.version import upload_project_code
+from BenchKit.Miscellaneous.utils.bucket import upload_using_presigned_url
 from colorama import Fore, Style
 from pathlib import Path
 from tqdm import tqdm
-
 
 
 def create_datasets():
@@ -46,10 +45,10 @@ def migrate_code(version: int):
 
     for set_dict in tqdm(data_dict.items(), colour="blue"):
         _, v = set_dict
-        upload_file(v["url"],
-                    os.path.split(v["fields"]["key"])[-1],
-                    os.path.split(v["fields"]["key"])[-1],
-                    v["fields"])
+        upload_using_presigned_url(v["url"],
+                                   os.path.split(v["fields"]["key"])[-1],
+                                   os.path.split(v["fields"]["key"])[-1],
+                                   v["fields"])
 
     print(Fore.GREEN + "Completed Upload process" + Style.RESET_ALL)
 
