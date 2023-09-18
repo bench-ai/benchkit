@@ -14,11 +14,10 @@ Datasets
 /BenchKit.py
 manage.py
 Process.json
-Models
 MainScript.py
 Process0.json
 requirements.txt
-TrainScript.py
+benchkit/train_script/train_script.py
 Bench-My_Test_Project_2-V1-latest.tar
 credentials.json
 tartest.py
@@ -26,3 +25,4 @@ dependency.txt
 test2.py
 Benchkit 0.66 test 9
 Benchkit 0.66 test 10
+train_script.py
