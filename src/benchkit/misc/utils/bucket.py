@@ -15,7 +15,7 @@ def upload_using_presigned_url(
 
     with open(file_path, "rb") as f:
         files = {"file": (file_name, f)}
-        http_response = requests.post(url, data=fields, files=files)
+        http_response = requests.post(url, data=fields, files=files)  # noqa S113
 
     if http_response.status_code != 204:
         raise RuntimeError(f"Failed to Upload {file_path}")

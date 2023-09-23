@@ -24,8 +24,7 @@ def verbose_logo(version: str):
                     else:
                         status = False
                         new_line += (
-                            f"{Fore.YELLOW}{status_line}{Style.RESET_ALL}"
-                            + char
+                            f"{Fore.YELLOW}{status_line}{Style.RESET_ALL}" + char
                         )
                         status_line = ""
                 else:

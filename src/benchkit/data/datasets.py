@@ -9,7 +9,6 @@ from typing import final
 import numpy as np
 import requests
 import torch
-from torch.utils.data import Dataset
 from torch.utils.data import IterableDataset
 
 from benchkit.data.file_saver import BaseFile
@@ -124,7 +123,8 @@ class IterableChunk(IterableDataset):
 
     def test_init(self, name: str, length: int):
         warnings.warn(
-            "Warning this method should only be used  for local testing purposes"
+            "Warning this method should only be used  for local testing purposes",
+            stacklevel=2,
         )
         self._cloud = False
         self._name = name
@@ -168,7 +168,8 @@ class IterableChunk(IterableDataset):
         if os.path.isdir(root_dir):
             shutil.rmtree(root_dir)
 
-        mem_zip = requests.get(download_url)
+        # TODO: Consider adding a timeout here. Ignoring bugbear issue for now ...
+        mem_zip = requests.get(download_url)  # noqa S113
 
         zip_dir = os.path.join("", f"Temp-zip-{f_id}")
         if os.path.isdir(zip_dir):

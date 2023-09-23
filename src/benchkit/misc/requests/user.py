@@ -58,7 +58,7 @@ def authorize_response(func):
     return wrapper
 
 
-class UnknownRequest(Exception):
+class UnknownRequestError(Exception):
     pass
 
 
@@ -77,8 +77,10 @@ def get_user_project() -> dict:
     return json.loads(response.content)
 
 
+# flake8: noqa: S113
 @authorize_response
 def request_executor(req_type: str, **kwargs):
+    # TODO: Consider adding a timeout and catching the errors.
     if req_type.lower() == "post":
         response = requests.post(**kwargs)
     elif req_type.lower() == "patch":
@@ -90,6 +92,6 @@ def request_executor(req_type: str, **kwargs):
     elif req_type.lower() == "delete":
         response = requests.delete(**kwargs)
     else:
-        raise UnknownRequest("Options are post, patch, get, put, delete")
+        raise UnknownRequestError("Options are post, patch, get, put, delete")
 
     return response

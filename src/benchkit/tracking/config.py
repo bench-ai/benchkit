@@ -184,7 +184,7 @@ class Config:
 
         if not os.path.isdir(state_dir_path):
             raise RuntimeError(
-                f"save state function did not return a path to a valid directory"
+                "save state function did not return a path to a valid directory"
             )
 
         self.upload_model_state(
@@ -209,7 +209,7 @@ class Config:
 
         if not os.path.isdir(save_dir_path):
             raise RuntimeError(
-                f"save function did not return a path to a valid directory"
+                "save function did not return a path to a valid directory"
             )
 
         self.upload_model_save(

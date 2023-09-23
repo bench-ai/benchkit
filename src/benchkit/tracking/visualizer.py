@@ -37,12 +37,14 @@ class PointGetter:
             case _:
                 raise ValueError(f"Type: {tp}, is not supported")
 
-    def get_time_series_points(self, graph_id: str, graph_parameters: dict):
+    @staticmethod
+    def get_time_series_points(graph_id: str, graph_parameters: dict):
         num_threads = 4
         ln = list(
             zip(
                 graph_parameters["descriptors"]["line_names"],
                 [graph_id] * len(graph_parameters["descriptors"]["line_names"]),
+                strict=True,
             )
         )
 
@@ -72,13 +74,14 @@ def get_graph_n_points(config_id):
 
     num_threads = 4
 
-    zip_list = list(zip(type_list, graph_instance_list))
+    zip_list = list(zip(type_list, graph_instance_list, strict=True))
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
         future_results = [executor.submit(p, *z) for z in zip_list]
 
         results = [
-            (future.result(), desc) for future, desc in zip(future_results, desc_list)
+            (future.result(), desc)
+            for future, desc in zip(future_results, desc_list, strict=True)
         ]
 
     return results
@@ -87,7 +90,7 @@ def get_graph_n_points(config_id):
 def get_display_matrix(plot_count: int) -> tuple[int, int]:
     x = 1
     y = 1
-    for i in range(plot_count):
+    for _ in range(plot_count):
         if (x * y) < plot_count:
             if y <= x:
                 y += 1

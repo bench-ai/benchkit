@@ -156,7 +156,10 @@ class ModelRuns:
                 server_id_list,
                 tracker_config_id_list,
             ) = list(
-                zip(*list(map(ModelRuns._convert_tracker_config, tracker_config_data)))
+                zip(
+                    *list(map(ModelRuns._convert_tracker_config, tracker_config_data)),
+                    strict=True,
+                )
             )
 
             forward = yield (

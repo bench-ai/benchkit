@@ -1,6 +1,6 @@
 import json
 import os
-import pickle
+import pickle  # noqa S403
 import shutil
 import uuid
 import warnings
@@ -334,8 +334,9 @@ class NumericFile(BaseFile):
 
     @classmethod
     def load(cls, save_path: str):
+        # TODO: Possible security issue as stated by S301.
         with open(save_path, "rb") as file:
-            my_var = pickle.load(file)
+            my_var = pickle.load(file)  # noqa S301
 
         instance = cls()
         instance.numeric_list = my_var
@@ -377,7 +378,7 @@ class RawFile(BaseFile):
         self._file_list.append(file_name)
 
         if file_name in self._file_list:
-            warnings.warn(f"Duplicate file named: {file_name} found")
+            warnings.warn(f"Duplicate file named: {file_name} found", stacklevel=2)
 
         shutil.copyfile(file_path, os.path.join(self.save_path, file_name))
 

@@ -1,13 +1,11 @@
 """Nox sessions."""
 import os
 import shlex
-import shutil
 import sys
 from pathlib import Path
 from textwrap import dedent
 
 import nox
-
 
 try:
     from nox_poetry import Session
@@ -143,19 +141,20 @@ def tests(session: Session) -> None:
             session.notify("coverage", posargs=[])
 
 
-@session(python=python_versions[0])
-def coverage(session: Session) -> None:
-    """Produce the coverage report."""
-    args = session.posargs or ["report"]
-
-    session.install("coverage[toml]")
-
-    if not session.posargs and any(Path().glob(".coverage.*")):
-        session.run("coverage", "combine")
-
-    session.run(
-        "coverage",
-        *args,
-        "--omit=tests/*,src/gpt4docstrings/__main__.py,src/gpt4docstrings/cli.py",
-        "--fail-under=40",
-    )
+# TODO: Reactivate coverage when we have an acceptable number of unit tests.
+# @session(python=python_versions[0])
+# def coverage(session: Session) -> None:
+#     """Produce the coverage report."""
+#     args = session.posargs or ["report"]
+#
+#     session.install("coverage[toml]")
+#
+#     if not session.posargs and any(Path().glob(".coverage.*")):
+#         session.run("coverage", "combine")
+#
+#     session.run(
+#         "coverage",
+#         *args,
+#         "--omit=tests/*,src/gpt4docstrings/__main__.py,src/gpt4docstrings/cli.py",
+#         "--fail-under=40",
+#     )

@@ -51,7 +51,9 @@ class TimeSeries(BenchGraph):
         x_value_list = [step] * len(values)
         y_value_list = list(values.values())
 
-        zips = zip(graph_id_list, line_name_list, x_value_list, y_value_list)
+        zips = zip(
+            graph_id_list, line_name_list, x_value_list, y_value_list, strict=True
+        )
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
             future_results = [executor.submit(plot_time_series_point, *z) for z in zips]

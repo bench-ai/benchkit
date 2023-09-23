@@ -33,7 +33,7 @@ class UploadError(Exception):
 def get_folder_size(dataset_path) -> int:
     size = 0
 
-    for root, dirs, files in os.walk(dataset_path, topdown=False):
+    for root, _, files in os.walk(dataset_path, topdown=False):
         for name in files:
             if name.endswith(".tar.gz"):
                 size += os.path.getsize(os.path.join(root, name))
@@ -185,7 +185,7 @@ def run_upload(dataset_name: str):
 def get_directory_size(dataset_path) -> int:
     total_size = 0
 
-    for dir_path, dir_names, filenames in os.walk(dataset_path):
+    for dir_path, _, filenames in os.walk(dataset_path):
         for f in filenames:
             fp = os.path.join(dir_path, f)
             if not os.path.islink(fp):
@@ -198,14 +198,18 @@ def get_total_file_count(directory):
     total_files = 0
     idx = 0
 
-    for idx, (root, dirs, files) in enumerate(os.walk(directory)):
+    for idx, (_, _, files) in enumerate(os.walk(directory)):
         if idx != 0:
             total_files += len(files)
 
     return 0 if idx == 0 else total_files
 
 
-def save_file_and_label(dataset: ProcessorDataset, ds_name: str, check=100):
+# TODO: Consider refactoring this function since it's too complex (C901) -> https://www.flake8rules.com/rules/C901.html
+# flake8: noqa: C901
+def save_file_and_label(
+    dataset: ProcessorDataset, ds_name: str, check=100
+):  # noqa C901
     cwd = os.getcwd()
     save_folder = os.path.join(cwd, "ProjectDatasets", ds_name)
 

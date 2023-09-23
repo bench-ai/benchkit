@@ -51,9 +51,9 @@ def login_manual(project_id: str, api_key: str):
 
     try:
         test_login()
-    except RuntimeError:
+    except RuntimeError as exc:
         logout()
-        raise ValueError("Credentials invalid")
+        raise ValueError("Credentials invalid") from exc
 
 
 def write_manager():
@@ -139,7 +139,8 @@ def pull_version(version: int):
 
     for item in tqdm(code_dict.items()):
         k, v = item
-        mem_zip = requests.get(v)
+        # TODO: Add timeout here
+        mem_zip = requests.get(v)  # noqa S113
         with open(f"{k}.tar.gz", "wb") as f:
             f.write(mem_zip.content)
 
@@ -147,7 +148,8 @@ def pull_version(version: int):
         os.remove(f"{k}.tar.gz")
 
 
-def show_experiments(version=None, state=None):
+# TODO: Refactor this function if possible. Too complex.
+def show_experiments(version=None, state=None):  # noqa C901
     ext = False
     page = 1
     page_dict = {1: 0}
@@ -233,6 +235,8 @@ def show_experiments(version=None, state=None):
             ext = True
 
 
+# TODO: Refactor this function if possible. Too complex.
+# flake8: noqa: C901
 def show_model_runs(
     evaluation_criteria: str | int,
     sort_by: str,
@@ -349,7 +353,7 @@ def show_model_runs(
                         tracker_config_id_list[config_num - count]
                     )
                 case _:
-                    raise ValueError(f"Valid modes are only s v m")
+                    raise ValueError("Valid modes are only s v m")
 
             infinite = False
         else:
@@ -376,7 +380,9 @@ def show_logs(instance_id: str):
                     time.sleep(5)
         else:
             current_timestamp = log_dict["update_timestamp"]
-            mem_file = requests.get(log_dict["log_url"])
+
+            # TODO: Consider adding a timeout here.
+            mem_file = requests.get(log_dict["log_url"])  # noqa S113
             content = mem_file.text
             lines = content.splitlines()
 
@@ -386,7 +392,7 @@ def show_logs(instance_id: str):
                     file_line += 1
 
 
-def main():
+def main():  # noqa C901
     parser = argparse.ArgumentParser()
 
     parser.add_argument(

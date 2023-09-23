@@ -37,7 +37,10 @@ def generate_tar(tar_name: str, file_path: str):
 
 def extract_tar(tar_path: str, extraction_path: str):
     file = tarfile.open(tar_path)
-    file.extractall(extraction_path)
+
+    # TODO: Careful with this one because it may be used to perform archive attacks as
+    #  explained in this Issue -> https://github.com/tern-tools/tern/issues/226
+    file.extractall(extraction_path)  # noqa S202
 
 
 def download_file(save_location: str, url: str) -> None:
@@ -47,7 +50,7 @@ def download_file(save_location: str, url: str) -> None:
     :param url: the url used to download the tar file
     """
 
-    mem_zip = requests.get(url)
+    mem_zip = requests.get(url)  # noqa S113
 
     tar_save_path = f"bench-{str(uuid.uuid4())}.tar.gz"
     with open(tar_save_path, "wb") as f:
