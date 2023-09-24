@@ -332,9 +332,7 @@ def create_dataset_dir():
             file.write(
                 "# Create your datasets here, follow this tutorial for help: ↓\n"
             )
-            file.write(
-                "# https://docs.bench-ai.com/Tutorials/data-migration \n"
-            )
+            file.write("# https://docs.bench-ai.com/Tutorials/data-migration \n")
             file.write(
                 "# Run `python manage.py migrate-data` to migrate local data to the cloud"
             )
