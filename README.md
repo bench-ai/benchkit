@@ -58,26 +58,4 @@ We allow users to:
 changes to the repo, or can request for features on the Bench AI Site!
 
 ### How to Contribute
-
-coming soon...
-
-### What we need help with
-
-1. BUGS 🐛
-
-   1. We could always use the help in squashing any bugs
-
-2. Integrations 🔨
-
-   1. We would love for integrations to be added to your favorite libraries / products: Ray, Snowflake, Tensorflow, etc...
-
-3. Optimizations 🚀
-
-   1. Think Something is too slow go ahead and speed it up!
-
-4. Graphing 📊
-
-   1. We are missing out on a bunch of cool graphs that should be directly integrated, please add them
-
-5. Misc 🤷‍
-   1. Have a cool feature that doesn't fit into any of these categories? Go ahead and do it we would love to see what you build!
+Check out this contribution [guide](https://github.com/bench-ai/benchkit/blob/main/CONTRIBUTING.md) 
