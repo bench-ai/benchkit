@@ -1,11 +1,11 @@
 import argparse
 import os
 
-from BenchKit.Data.Helpers import create_dataset_zips, test_dataloading, run_upload
-from Datasets.ProjectDatasets import main
-from BenchKit.Miscellaneous.utils.tar import generate_tar
-from BenchKit.Miscellaneous.requests.version import upload_project_code
-from BenchKit.Miscellaneous.utils.bucket import upload_using_presigned_url
+from benchkit.data.helpers import create_dataset_zips, test_dataloading, run_upload
+from datasets.project_datasets import main
+from benchkit.misc.utils.tar import generate_tar
+from benchkit.misc.requests.version import upload_project_code
+from benchkit.misc.utils.bucket import upload_using_presigned_url
 from colorama import Fore, Style
 from pathlib import Path
 from tqdm import tqdm
@@ -20,13 +20,13 @@ def migrate_code(version: int):
     dep_path = Path(__file__).resolve().parent / "dependencies.txt"
     dep_tar = generate_tar("dependency", str(dep_path))
 
-    mod_path = Path(__file__).resolve().parent / "Models"
+    mod_path = Path(__file__).resolve().parent / "models"
     mod_tar = generate_tar("models", str(mod_path))
 
-    dat_path = Path(__file__).resolve().parent / "Datasets"
+    dat_path = Path(__file__).resolve().parent / "datasets"
     dat_tar = generate_tar("datasets", str(dat_path))
 
-    ts_path = Path(__file__).resolve().parent / "TrainScript.py"
+    ts_path = Path(__file__).resolve().parent / "train_script.py"
     ts_tar = generate_tar("train-script", str(ts_path))
 
     print(Fore.GREEN + "Completed Zipping process" + Style.RESET_ALL)

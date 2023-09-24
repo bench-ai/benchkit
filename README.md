@@ -4,9 +4,9 @@
 
 [![](https://dcbadge.vercel.app/api/server/24BCstk4re)](https://discord.gg/24BCstk4re) [![](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/company/bench-ai)
 
-# _Bench-Kit_
+# _benchkit_
 
-Welcome to Bench-Kit! We are an End-To-End Free Machine Learning Model management platform.
+Welcome to `benchkit`! We are an End-To-End Free Machine Learning Model management platform.
 
 We allow users to:
 
@@ -24,7 +24,7 @@ We allow users to:
 
 ## How it works
 
-Bench-Kit works in sync with the Bench AI site, and is completely free.
+`benchkit` works in sync with the Bench AI site, and is completely free.
 
 ### 1) Create a repo on Bench AI
 
@@ -54,7 +54,7 @@ Bench-Kit works in sync with the Bench AI site, and is completely free.
 
 ## Contribute
 
-Bench-kit is completely open source, and we could always use the help! You can make
+`benchkit` is completely open source, and we could always use the help! You can make
 changes to the repo, or can request for features on the Bench AI Site!
 
 ### How to Contribute

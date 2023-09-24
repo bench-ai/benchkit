@@ -5,7 +5,7 @@ from colorama import Style
 
 
 def get_version():
-    return "0.0.66"
+    return "0.1.0"
 
 
 def verbose_logo(version: str):

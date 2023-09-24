@@ -313,13 +313,13 @@ def iterate_directory(file_dir: str, current_file: int) -> tuple[str, bool]:
 
 
 def create_dataset_dir():
-    if os.path.isdir("./Datasets"):
+    if os.path.isdir("./datasets"):
         pass
     else:
-        current_path = "./Datasets"
+        current_path = "./datasets"
         os.mkdir(current_path)
 
-        whole_path = os.path.join(current_path, "ProjectDatasets.py")
+        whole_path = os.path.join(current_path, "project_datasets.py")
         init_path = os.path.join(current_path, "__init__.py")
 
         with open(init_path, "w"):
@@ -327,9 +327,17 @@ def create_dataset_dir():
 
         with open(whole_path, "w") as file:
             file.write(
-                "from benchkit.data.Datasets import ProcessorDataset, IterableChunk\n"
+                "from benchkit.data.datasets import ProcessorDataset, IterableChunk\n"
             )
-            file.write("# Write your datasets or datapipes here")
+            file.write(
+                "# Create your datasets here, follow this tutorial for help: ↓\n"
+            )
+            file.write(
+                "# https://docs.bench-ai.com/Tutorials/data-migration \n"
+            )
+            file.write(
+                "# Run `python manage.py migrate-data <Version#>` to migrate local data to the cloud"
+            )
             file.write("\n")
             file.write("\n")
             file.write("\n")
@@ -345,14 +353,8 @@ def create_dataset_dir():
             file.write(
                 "    The elements of the tuple represent the components to construct your dataset\n"
             )
-            file.write("    Element one will be your ProcessorDataset object\n")
-            file.write("    Element two will be your IterableChunk class\n")
+            file.write("    Element one will be your ProcessorDataset \n")
+            file.write("    Element two will be your IterableChunk \n")
             file.write("    Element three will be the name of your Dataset\n")
-            file.write(
-                "    Element four will be all the args needed for your Iterable Chunk as a list\n"
-            )
-            file.write(
-                "    Element five will be all the kwargs needed for your Iterable Chunk as a Dict\n"
-            )
             file.write('    """\n')
             file.write("    pass\n")

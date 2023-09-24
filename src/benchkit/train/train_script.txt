@@ -1,9 +1,4 @@
-import numpy as np
-import torch
-from BenchKit.Data.Helpers import get_dataloader
-import torch.nn as nn
-import torch.optim as opt
-from tqdm import tqdm
+from benchkit.data.helpers import get_dataloader
 
 
 def main():
