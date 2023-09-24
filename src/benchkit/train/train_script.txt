@@ -1,0 +1,18 @@
+from benchkit.data.helpers import get_dataloader
+
+"""
+- Follow this tutorial for help writing your training script: https://docs.bench-ai.com/Tutorials/train-script
+- Once you are ready to train your model run `python manage.py migrate-code <Version#>`
+- Then follow this tutorial to start training sessions: https://docs.bench-ai.com/Tutorials/Experiments
+"""
+
+
+def main():
+
+    """
+    In this method training of your model should take place
+    """
+
+
+if __name__ == '__main__':
+    main()
