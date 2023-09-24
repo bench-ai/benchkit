@@ -58,4 +58,5 @@ We allow users to:
 changes to the repo, or can request for features on the Bench AI Site!
 
 ### How to Contribute
-Check out this contribution [guide](https://github.com/bench-ai/benchkit/blob/main/CONTRIBUTING.md) 
+
+Check out this contribution [guide](https://github.com/bench-ai/benchkit/blob/main/CONTRIBUTING.md)

@@ -1,3 +1,4 @@
+import importlib.metadata
 from pathlib import Path
 
 from colorama import Fore
@@ -5,7 +6,7 @@ from colorama import Style
 
 
 def get_version():
-    return "0.1.0"
+    return importlib.metadata.version("benchkit")
 
 
 def verbose_logo(version: str):
