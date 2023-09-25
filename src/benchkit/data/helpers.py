@@ -107,7 +107,9 @@ def create_dataset_zips(processed_dataset: ProcessorDataset, dataset_name: str):
         delete_dataset(ds["id"])
 
     create_dataset(
-        dataset_name, count, get_folder_size(os.path.join(".", "ProjectDatasets", dataset_name))
+        dataset_name,
+        count,
+        get_folder_size(os.path.join(".", "ProjectDatasets", dataset_name)),
     )
 
 

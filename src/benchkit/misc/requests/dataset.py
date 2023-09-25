@@ -115,8 +115,9 @@ def get_chunk_count(dataset_id: str) -> int:
     return num_dict["latest_chunk_num"] if num_dict["latest_chunk_num"] else 0
 
 
-def get_post_url(dataset_id: str, file_size: int, file_path: str, file_count: int) -> Response:
-
+def get_post_url(
+    dataset_id: str, file_size: int, file_path: str, file_count: int
+) -> Response:
     """
     gives a presigned post URL, this URL should be used for uploading chunks
 
@@ -147,7 +148,6 @@ def get_post_url(dataset_id: str, file_size: int, file_path: str, file_count: in
 
 
 def delete_dataset(dataset_id: str) -> Response:
-
     """
     deletes a dataset from the project
 
@@ -173,7 +173,6 @@ def delete_dataset(dataset_id: str) -> Response:
 
 
 def get_get_url(chunk_id: str) -> str:
-
     """
     returns a presigned get url that acquires the chunk gzip
 
@@ -188,7 +187,6 @@ def get_get_url(chunk_id: str) -> str:
 
 
 def get_ds_chunks(dataset_id: str) -> list[dict]:
-
     """
     gathers all the chunks belonging to a dataset
 

@@ -91,9 +91,7 @@ def init_config(params: dict, evaluation_criteria: str) -> str:
 
     instance_id = os.getenv("INSTANCE_ID")
 
-    request_url = "/".join(
-        [get_main_url(), "api", "tracking", "bk", "init", "config"]
-    )
+    request_url = "/".join([get_main_url(), "api", "tracking", "bk", "init", "config"])
 
     response = request_executor(
         "post",
