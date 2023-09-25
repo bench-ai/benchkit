@@ -1,5 +1,4 @@
 import json
-import os
 
 from .user import request_executor
 from benchkit.misc.settings import get_main_url
@@ -23,8 +22,8 @@ def post_model_save_presigned_url(
                 "fields" dict
     """
 
-    request_url = os.path.join(
-        get_main_url(), "api", "tracking", "bk", "model", "save", "file"
+    request_url = "/".join(
+        [get_main_url(), "api", "tracking", "bk", "model", "save", "file"]
     )
 
     response = request_executor(
@@ -60,8 +59,8 @@ def post_model_state_presigned_url(
                 "fields" dict
     """
 
-    request_url = os.path.join(
-        get_main_url(), "api", "tracking", "bk", "model", "state", "file"
+    request_url = "/".join(
+        [get_main_url(), "api", "tracking", "bk", "model", "state", "file"]
     )
 
     response = request_executor(
@@ -87,8 +86,8 @@ def get_model_state_presigned_url(model_state_id: str) -> dict:
         {url: (str)}
     """
 
-    request_url = os.path.join(
-        get_main_url(), "api", "tracking", "bk", "model", "state", "file"
+    request_url = "/".join(
+        [get_main_url(), "api", "tracking", "bk", "model", "state", "file"]
     )
 
     response = request_executor(
@@ -107,8 +106,8 @@ def get_model_save_presigned_url(model_save_id: str) -> dict:
         {url: (str)}
     """
 
-    request_url = os.path.join(
-        get_main_url(), "api", "tracking", "bk", "model", "save", "file"
+    request_url = "/".join(
+        [get_main_url(), "api", "tracking", "bk", "model", "save", "file"]
     )
 
     response = request_executor(

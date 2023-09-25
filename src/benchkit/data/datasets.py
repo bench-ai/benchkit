@@ -281,7 +281,7 @@ class IterableChunk(IterableDataset):
         self.start_index = self.init_start_index
 
         if not self._cloud:
-            data_path = f"ProjectDatasets/{self._name}"
+            data_path = os.path.join("ProjectDatasets", self._name)
             data_list = [i for i in os.listdir(data_path) if i.endswith(".tar.gz")]
             self.chunk_list = [os.path.join(data_path, chunk) for chunk in data_list]
             self.chunk_list = sorted(

@@ -1,5 +1,4 @@
 import json
-import os
 
 import torch
 
@@ -9,13 +8,13 @@ from benchkit.misc.verbose import get_version
 
 
 def delete_version(version: int):
-    request_url = os.path.join(get_main_url(), "api", "project", "b-k", "version")
+    request_url = "/".join([get_main_url(), "api", "project", "b-k", "version"])
 
     request_executor("delete", url=request_url, params={"version": version})
 
 
 def get_versions():
-    request_url = os.path.join(get_main_url(), "api", "project", "b-k", "version")
+    request_url = "/".join([get_main_url(), "api", "project", "b-k", "version"])
 
     response = request_executor("get", url=request_url)
 
@@ -23,7 +22,7 @@ def get_versions():
 
 
 def pull_project_code(version: int):
-    request_url = os.path.join(get_main_url(), "api", "project", "get", "code")
+    request_url = "/".join([get_main_url(), "api", "project", "get", "code"])
 
     response = request_executor("get", url=request_url, params={"version": version})
 
@@ -41,7 +40,7 @@ def upload_project_code(
     dataloader_name: str,
     version: int,
 ):
-    request_url = os.path.join(get_main_url(), "api", "project", "upload", "code")
+    request_url = "/".join([get_main_url(), "api", "project", "upload", "code"])
 
     response = request_executor(
         "post",

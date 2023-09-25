@@ -1,12 +1,11 @@
 import json
-import os
 
 from .user import request_executor
 from benchkit.misc.settings import get_main_url
 
 
 def plot_time_series_point(graph_id: str, line_name: str, x_value: int, y_value: float):
-    request_url = os.path.join(get_main_url(), "api", "tracking", "time-series", "plot")
+    request_url = "/".join([get_main_url(), "api", "tracking", "time-series", "plot"])
 
     response = request_executor(
         "post",
@@ -28,7 +27,7 @@ def plot_time_series_point(graph_id: str, line_name: str, x_value: int, y_value:
 def make_time_series_graph(
     config_id: str, name: str, line_names: list[str], x_name: str, y_name: str
 ) -> str:
-    request_url = os.path.join(get_main_url(), "api", "tracking", "time-series")
+    request_url = "/".join([get_main_url(), "api", "tracking", "time-series"])
 
     response = request_executor(
         "post",
@@ -53,7 +52,7 @@ def get_all_graphs(config_id: str):
     next_page = 1
     graph_list = []
 
-    request_url = os.path.join(get_main_url(), "api", "tracking", "graphs", "b-k")
+    request_url = "/".join([get_main_url(), "api", "tracking", "graphs", "b-k"])
 
     while next_page:
         response = request_executor(
@@ -72,8 +71,8 @@ def get_all_graphs(config_id: str):
 def get_time_series_points(line_name: str, graph_id):
     point_count = 100
 
-    request_url = os.path.join(
-        get_main_url(), "api", "tracking", "time-series", "plot", "segmented", "b-k"
+    request_url = "/".join(
+        [get_main_url(), "api", "tracking", "time-series", "plot", "segmented", "b-k"]
     )
 
     response = request_executor(
