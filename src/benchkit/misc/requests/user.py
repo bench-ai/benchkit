@@ -1,5 +1,4 @@
 import json
-import os
 from functools import wraps
 from pathlib import Path
 
@@ -63,14 +62,14 @@ class UnknownRequestError(Exception):
 
 
 def test_login() -> bool:
-    request_url = os.path.join(get_main_url(), "api", "auth", "project", "login")
+    request_url = "/".join([get_main_url(), "api", "auth", "project", "login"])
     response = request_executor("get", url=request_url)
 
     return json.loads(response.content)["success"]
 
 
 def get_user_project() -> dict:
-    request_url = os.path.join(get_main_url(), "api", "project", "unique")
+    request_url = "/".join([get_main_url(), "api", "project", "unique"])
 
     response = request_executor("get", url=request_url)
 

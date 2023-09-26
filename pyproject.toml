@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "benchkit"
-version = "1.0.0"
+version = "1.0.1"
 description = "Your End to End ML workbench."
 authors = ["BenchAI"]
 readme = "README.md"

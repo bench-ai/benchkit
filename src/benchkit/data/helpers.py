@@ -91,8 +91,9 @@ def remove_all_temps():
 
 
 def create_dataset_zips(processed_dataset: ProcessorDataset, dataset_name: str):
-    if os.path.isdir(f"ProjectDatasets/{dataset_name}"):
-        shutil.rmtree(f"ProjectDatasets/{dataset_name}")
+    project_dataset_path = os.path.join("ProjectDatasets", dataset_name)
+    if os.path.isdir(project_dataset_path):
+        shutil.rmtree(project_dataset_path)
 
     print(Fore.RED + "Started data processing" + Style.RESET_ALL)
 
@@ -106,7 +107,9 @@ def create_dataset_zips(processed_dataset: ProcessorDataset, dataset_name: str):
         delete_dataset(ds["id"])
 
     create_dataset(
-        dataset_name, count, get_folder_size(f"./ProjectDatasets/{dataset_name}")
+        dataset_name,
+        count,
+        get_folder_size(os.path.join(".", "ProjectDatasets", dataset_name)),
     )
 
 
@@ -141,8 +144,10 @@ def run_upload(dataset_name: str):
 
     length = ds["sample_count"]
 
-    if os.path.isdir(f"ProjectDatasets/{dataset_name}"):
-        x = os.listdir(f"ProjectDatasets/{dataset_name}")
+    save_path = os.path.join(".", "ProjectDatasets", dataset_name)
+
+    if os.path.isdir(save_path):
+        x = os.listdir(save_path)
         if len(x) == 0:
             raise RuntimeError("Project Folder is empty")
     else:
@@ -152,8 +157,6 @@ def run_upload(dataset_name: str):
         raise RuntimeError("data has not been processed")
 
     print(Fore.RED + "Started Upload" + Style.RESET_ALL)
-
-    save_path = f"ProjectDatasets/{dataset_name}"
 
     last_file_number = get_chunk_count(ds["id"])
 
@@ -179,7 +182,7 @@ def run_upload(dataset_name: str):
 
     print(Fore.GREEN + "Finished Upload" + Style.RESET_ALL)
 
-    shutil.rmtree(f"ProjectDatasets/{dataset_name}")
+    shutil.rmtree(save_path)
 
 
 def get_directory_size(dataset_path) -> int:
@@ -313,14 +316,14 @@ def iterate_directory(file_dir: str, current_file: int) -> tuple[str, bool]:
 
 
 def create_dataset_dir():
-    if os.path.isdir("./datasets"):
+    if os.path.isdir("datasets"):
         pass
     else:
-        current_path = "./datasets"
-        os.mkdir(current_path)
+        current_path = "datasets"
+        os.mkdir("datasets")
 
-        whole_path = os.path.join(current_path, "project_datasets.py")
-        init_path = os.path.join(current_path, "__init__.py")
+        whole_path = os.path.join("datasets", "project_datasets.py")
+        init_path = os.path.join("datasets", "__init__.py")
 
         with open(init_path, "w"):
             pass

@@ -6,7 +6,7 @@ from benchkit.misc.settings import get_main_url
 
 
 def get_logs(page: int, instance_id: str):
-    request_url = os.path.join(get_main_url(), "api", "tracking", "get", "log", "b-k")
+    request_url = "/".join([get_main_url(), "api", "tracking", "get", "log", "b-k"])
 
     response = request_executor(
         "get", url=request_url, params={"page": page, "instance_id": instance_id}
@@ -16,7 +16,7 @@ def get_logs(page: int, instance_id: str):
 
 
 def get_experiments(page: int, version=None, state=None):
-    request_url = os.path.join(get_main_url(), "api", "tracking", "get", "experiment")
+    request_url = "/".join([get_main_url(), "api", "tracking", "get", "experiment"])
 
     response = request_executor(
         "get",
@@ -59,8 +59,8 @@ def get_all_configs(
              "version": int}
     """
 
-    request_url = os.path.join(
-        get_main_url(), "api", "tracking", "bk", "all", "config", "data"
+    request_url = "/".join(
+        [get_main_url(), "api", "tracking", "bk", "all", "config", "data"]
     )
 
     response = request_executor(
@@ -91,9 +91,7 @@ def init_config(params: dict, evaluation_criteria: str) -> str:
 
     instance_id = os.getenv("INSTANCE_ID")
 
-    request_url = os.path.join(
-        get_main_url(), "api", "tracking", "bk", "init", "config"
-    )
+    request_url = "/".join([get_main_url(), "api", "tracking", "bk", "init", "config"])
 
     response = request_executor(
         "post",
@@ -111,8 +109,8 @@ def init_config(params: dict, evaluation_criteria: str) -> str:
 
 
 def kill_server():
-    request_url = os.path.join(
-        get_main_url(), "api", "tracking", "server", "auto", "stop"
+    request_url = "/".join(
+        [get_main_url(), "api", "tracking", "server", "auto", "stop"]
     )
 
     instance_id = os.getenv("INSTANCE_ID")
@@ -134,7 +132,7 @@ def get_hyperparameters() -> dict:
      "project_id": str}
     """
 
-    request_url = os.path.join(get_main_url(), "api", "tracking", "bk", "hyper-params")
+    request_url = "/".join([get_main_url(), "api", "tracking", "bk", "hyper-params"])
 
     response = request_executor("get", url=request_url)
 
