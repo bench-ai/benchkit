@@ -328,7 +328,7 @@ def create_dataset_dir():
         with open(init_path, "w"):
             pass
 
-        with open(whole_path, "w") as file:
+        with open(whole_path, "w", encoding="utf-8") as file:
             file.write(
                 "from benchkit.data.datasets import ProcessorDataset, IterableChunk\n"
             )
