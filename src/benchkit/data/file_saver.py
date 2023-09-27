@@ -178,14 +178,11 @@ class NumpyFile(BaseFile):
     @classmethod
     def load(cls, save_path: str, enforce_shape: bool):
         instance = cls(enforce_shape)
-
-        loaded_array = np.load(save_path, allow_pickle=True)
-
         if enforce_shape:
-            instance.arr = loaded_array
+            instance.arr = np.load(save_path, allow_pickle=True)
         else:
-            instance.arr_dict = loaded_array
-
+            with np.load(save_path) as loaded_array:
+                instance.arr_dict = loaded_array
         return instance
 
     def save(self):
