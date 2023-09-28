@@ -112,6 +112,8 @@ class NumpyFile(BaseFile):
         self.shape = shape
 
         self._arr_dict = {}
+        self._npz_key_count = 0
+        self._seen_count = 0
         self.arr = np.array([np.NaN])
 
     def reset(self):
@@ -125,6 +127,24 @@ class NumpyFile(BaseFile):
         )
         self.arr_dict = {}
         self.arr = np.array([np.NaN])
+        self.npz_key_count = 0
+        self.seen_count = 0
+
+    @property
+    def seen_count(self):
+        return self._seen_count
+
+    @seen_count.setter
+    def seen_count(self, seen_count):
+        self._seen_count = seen_count
+
+    @property
+    def npz_key_count(self):
+        return self._npz_key_count
+
+    @npz_key_count.setter
+    def npz_key_count(self, npz_key_count):
+        self._npz_key_count = npz_key_count
 
     @property
     def arr_dict(self):
@@ -173,16 +193,24 @@ class NumpyFile(BaseFile):
         if self.enforce_shape:
             return self.arr[idx]
         else:
-            return self.arr_dict[f"np-{idx}"]
+            self.seen_count += 1
+            ret_arr = self.arr_dict[f"np-{idx}"]
+            if self.npz_key_count == self.seen_count:
+                self.arr_dict.close()
+            return ret_arr
 
     @classmethod
     def load(cls, save_path: str, enforce_shape: bool):
         instance = cls(enforce_shape)
+
+        loaded_array = np.load(save_path, allow_pickle=True)
+
         if enforce_shape:
-            instance.arr = np.load(save_path, allow_pickle=True)
+            instance.arr = loaded_array
         else:
-            with np.load(save_path) as loaded_array:
-                instance.arr_dict = loaded_array
+            instance.arr_dict = loaded_array
+            instance.npz_key_count = len(loaded_array.keys())
+
         return instance
 
     def save(self):
