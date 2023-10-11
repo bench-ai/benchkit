@@ -1,10 +1,10 @@
 import os
 import unittest
-import shutil
+
 from src.benchkit.data.helpers import create_dataset_dir
 
-class TestCreateDatasetDir(unittest.TestCase):
 
+class TestCreateDatasetDir(unittest.TestCase):
     def test_create_dataset_dir(self):
         # Run the function
         create_dataset_dir()
@@ -20,5 +20,6 @@ class TestCreateDatasetDir(unittest.TestCase):
         whole_path = os.path.join("datasets", "project_datasets.py")
         self.assertTrue(os.path.isfile(whole_path))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()
